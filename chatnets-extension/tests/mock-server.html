@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Mock Server - Chatnets Extension Tests</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace;
+      padding: 20px;
+      background: #f5f5f5;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+    h1 {
+      margin-top: 0;
+      color: #333;
+    }
+    button {
+      padding: 8px 16px;
+      margin-right: 8px;
+      background: #1a73e8;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #1557b0;
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .status {
+      margin-top: 16px;
+      padding: 12px;
+      background: white;
+      border-radius: 4px;
+    }
+    .status-running {
+      border-left: 4px solid #34a853;
+    }
+    .status-stopped {
+      border-left: 4px solid #ea4335;
+    }
+    .data-section {
+      margin-top: 20px;
+    }
+    .data-section h3 {
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+    .data-item {
+      background: white;
+      padding: 8px 12px;
+      margin-bottom: 8px;
+      border-radius: 4px;
+      font-size: 12px;
+    }
+    .clear-btn {
+      background: #5f6368;
+    }
+    .clear-btn:hover {
+      background: #4a4d50;
+    }
+  </style>
+</head>
+<body>
+  <h1>Mock Backend Server</h1>
+  <p>模拟 chatnets-server API 用于扩展测试</p>
+
+  <button id="start">启动模拟服务器</button>
+  <button id="stop" disabled>停止</button>
+  <button id="clear" class="clear-btn">清空数据</button>
+
+  <div class="status status-stopped" id="status">
+    <strong>状态:</strong> <span id="status-text">已停止</span><br>
+    <small>服务器地址: http://127.0.0.1:8765</small>
+  </div>
+
+  <div class="data-section">
+    <h3>接收到的数据</h3>
+    <div id="received-data"></div>
+  </div>
+
+  <script>
+    const startBtn = document.getElementById('start');
+    const stopBtn = document.getElementById('stop');
+    const clearBtn = document.getElementById('clear');
+    const statusEl = document.getElementById('status');
+    const statusTextEl = document.getElementById('status-text');
+    const receivedDataEl = document.getElementById('received-data');
+
+    // In-memory storage for received data
+    const mockData = {
+      sessions: {},
+      messages: [],
+      pipelineTriggers: []
+    };
+
+    // Check if mock server is running
+    async function checkStatus() {
+      try {
+        const response = await fetch('http://127.0.0.1:8765/health');
+        if (response.ok) {
+          statusEl.className = 'status status-running';
+          statusTextEl.textContent = '运行中';
+          startBtn.disabled = true;
+          stopBtn.disabled = false;
+        } else {
+          statusEl.className = 'status status-stopped';
+          statusTextEl.textContent = '已停止';
+          startBtn.disabled = false;
+          stopBtn.disabled = true;
+        }
+      } catch (e) {
+        statusEl.className = 'status status-stopped';
+        statusTextEl.textContent = '已停止';
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+      }
+    }
+
+    // Start mock server (opens instructions)
+    async function startMockServer() {
+      // Since we can't actually start a server from a web page,
+      // we provide instructions and show a simple mock response handler
+      alert(
+        '要启动模拟服务器：\n\n' +
+        '方法 1: 运行实际后端\n' +
+        'cd chatnets-server && go run cmd/server/main.go\n\n' +
+        '方法 2: 使用 Python 简单服务器\n' +
+        'python tests/mock_server.py\n\n' +
+        '模拟服务器将在 http://127.0.0.1:8765 运行'
+      );
+
+      // Start polling for status
+      statusInterval = setInterval(checkStatus, 2000);
+    }
+
+    // Stop polling
+    function stopMockServer() {
+      if (statusInterval) {
+        clearInterval(statusInterval);
+        statusInterval = null;
+      }
+      checkStatus();
+    }
+
+    // Clear received data
+    function clearData() {
+      mockData.sessions = {};
+      mockData.messages = [];
+      mockData.pipelineTriggers = [];
+      receivedDataEl.innerHTML = '';
+      console.log('[Mock Server] Data cleared');
+    }
+
+    // Display received data
+    function displayData() {
+      let html = '';
+
+      if (mockData.pipelineTriggers.length > 0) {
+        html += '<div class="data-item"><strong>Pipeline Triggers:</strong> ' +
+          mockData.pipelineTriggers.length + '</div>';
+      }
+
+      if (mockData.messages.length > 0) {
+        html += '<div class="data-item"><strong>Messages Received:</strong> ' +
+          mockData.messages.length + '</div>';
+        mockData.messages.forEach((msg, i) => {
+          html += `<div class="data-item" style="margin-left: 20px;">` +
+            `${i + 1}. [${msg.role}] ${msg.content.substring(0, 50)}...</div>`;
+        });
+      }
+
+      const sessionCount = Object.keys(mockData.sessions).length;
+      if (sessionCount > 0) {
+        html += '<div class="data-item"><strong>Sessions:</strong> ' + sessionCount + '</div>';
+      }
+
+      if (html === '') {
+        html = '<div class="data-item" style="color: #666;">暂无数据</div>';
+      }
+
+      receivedDataEl.innerHTML = html;
+    }
+
+    let statusInterval = null;
+
+    // Event listeners
+    startBtn.addEventListener('click', startMockServer);
+    stopBtn.addEventListener('click', stopMockServer);
+    clearBtn.addEventListener('click', clearData);
+
+    // Initial status check
+    checkStatus();
+
+    // Log that this is a mock server UI
+    console.log('[Mock Server UI] Loaded. This is a testing interface.');
+    console.log('[Mock Server UI] To test the extension, run the actual backend server.');
+  </script>
+</body>
+</html>

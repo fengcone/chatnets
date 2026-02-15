@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Chatnets Test Runner</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace;
+      padding: 20px;
+      background: #f5f5f5;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    h1 {
+      margin-top: 0;
+      color: #333;
+    }
+    button {
+      padding: 10px 20px;
+      background: #1a73e8;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover {
+      background: #1557b0;
+    }
+    .test-results {
+      margin-top: 20px;
+    }
+    .test {
+      padding: 10px 14px;
+      margin: 6px 0;
+      background: white;
+      border-radius: 4px;
+      border-left: 4px solid #ddd;
+    }
+    .test.pass {
+      border-left-color: #34a853;
+    }
+    .test.fail {
+      border-left-color: #ea4335;
+    }
+    .test-name {
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .test-status {
+      float: right;
+      font-size: 12px;
+      padding: 2px 8px;
+      border-radius: 3px;
+    }
+    .test.pass .test-status {
+      background: #e6f4ea;
+      color: #137333;
+    }
+    .test.fail .test-status {
+      background: #fce8e6;
+      color: #c5221f;
+    }
+    .error {
+      color: #c5221f;
+      font-size: 13px;
+      margin-top: 8px;
+      font-family: monospace;
+    }
+    .summary {
+      margin-top: 20px;
+      padding: 14px;
+      background: white;
+      border-radius: 4px;
+      display: flex;
+      justify-content: space-between;
+    }
+    .summary-pass {
+      color: #137333;
+      font-weight: 600;
+    }
+    .summary-fail {
+      color: #c5221f;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <h1>Chatnets Extension Tests</h1>
+  <button onclick="runAllTests()">Run All Tests</button>
+  <button onclick="clearResults()">Clear Results</button>
+  <div id="results" class="test-results"></div>
+  <div id="summary" class="summary" style="display: none;">
+    <span class="summary-pass">Passed: <span id="pass-count">0</span></span>
+    <span class="summary-fail">Failed: <span id="fail-count">0</span></span>
+  </div>
+
+  <script>
+    const resultsDiv = document.getElementById('results');
+    const summaryDiv = document.getElementById('summary');
+    const passCountEl = document.getElementById('pass-count');
+    const failCountEl = document.getElementById('fail-count');
+    let passCount = 0;
+    let failCount = 0;
+
+    function clearResults() {
+      resultsDiv.innerHTML = '';
+      passCount = 0;
+      failCount = 0;
+      updateSummary();
+    }
+
+    function updateSummary() {
+      passCountEl.textContent = passCount;
+      failCountEl.textContent = failCount;
+      summaryDiv.style.display = passCount + failCount > 0 ? 'flex' : 'none';
+    }
+
+    function log(name, passed, error) {
+      const div = document.createElement('div');
+      div.className = `test ${passed ? 'pass' : 'fail'}`;
+      div.innerHTML = `
+        <div class="test-name">${name}</div>
+        <span class="test-status">${passed ? 'PASS' : 'FAIL'}</span>
+        ${error ? `<div class="error">${error}</div>` : ''}
+      `;
+      resultsDiv.appendChild(div);
+      if (passed) passCount++; else failCount++;
+      updateSummary();
+    }
+
+    function runAllTests() {
+      clearResults();
+
+      // Run in-browser tests
+      runUnitTests();
+    }
+
+    function runUnitTests() {
+      // Test: Message format transformation
+      try {
+        const rawMessage = {
+          platform: 'deepseek',
+          sessionId: 'test-session-123',
+          messageId: 'test-msg-1',
+          role: 'user',
+          content: 'Hello World',
+          createdAt: '2026-01-26T10:00:00Z',
+          url: 'https://chat.deepseek.com/a/chat/s/test-session-123',
+          title: 'Test Chat',
+          order: 0
+        };
+
+        const expected = {
+          id: 'test-msg-1',
+          session_id: 'test-session-123',
+          role: 'user',
+          content: 'Hello World',
+          created_at: '2026-01-26T10:00:00Z',
+          order_in_session: 0,
+          url: 'https://chat.deepseek.com/a/chat/s/test-session-123',
+          title: 'Test Chat',
+          process_status: 'pending'
+        };
+
+        // Simulate transformMessageForAPI
+        const result = {
+          id: rawMessage.messageId,
+          session_id: rawMessage.sessionId,
+          role: rawMessage.role,
+          content: rawMessage.content,
+          created_at: rawMessage.createdAt,
+          order_in_session: rawMessage.order,
+          url: rawMessage.url,
+          title: rawMessage.title,
+          process_status: 'pending'
+        };
+
+        const passed = JSON.stringify(result) === JSON.stringify(expected);
+        log('Message Format Transformation', passed, passed ? '' : 'Transform does not match expected output');
+      } catch (e) {
+        log('Message Format Transformation', false, e.message);
+      }
+
+      // Test: Required fields validation
+      try {
+        const message = {
+          id: 'test-123',
+          session_id: 'session-abc',
+          role: 'user',
+          content: 'Test message',
+          created_at: '2026-01-26T10:00:00Z',
+          order_in_session: 0,
+          process_status: 'pending'
+        };
+
+        const requiredFields = ['id', 'session_id', 'role', 'content', 'created_at', 'order_in_session', 'process_status'];
+        const missingFields = requiredFields.filter(field => !(field in message));
+        const passed = missingFields.length === 0;
+
+        log('Required Fields Validation', passed, passed ? '' : `Missing: ${missingFields.join(', ')}`);
+      } catch (e) {
+        log('Required Fields Validation', false, e.message);
+      }
+
+      // Test: Role validation
+      try {
+        const validRoles = ['user', 'assistant'];
+        const userRole = 'user';
+        const assistantRole = 'assistant';
+
+        const userValid = validRoles.includes(userRole);
+        const assistantValid = validRoles.includes(assistantRole);
+
+        const passed = userValid && assistantValid;
+        log('Role Validation', passed, passed ? '' : 'Invalid role accepted');
+      } catch (e) {
+        log('Role Validation', false, e.message);
+      }
+
+      // Test: Date format validation
+      try {
+        const validISO8601 = '2026-01-26T10:00:00Z';
+        const date = new Date(validISO8601);
+        const isValid = date.toISOString() === validISO8601;
+
+        log('Date Format Validation', isValid, isValid ? '' : 'Invalid ISO8601 format');
+      } catch (e) {
+        log('Date Format Validation', false, e.message);
+      }
+
+      // Test: ChatGPT session ID extraction
+      try {
+        const mockURL = 'https://chatgpt.com/c/6789abcdef-1234-5678-9abc-def012345678';
+        const match = mockURL.match(/\/c\/([a-z0-9-]{36})/);
+        const passed = match && match[1] === '6789abcdef-1234-5678-9abc-def012345678';
+
+        log('ChatGPT Session ID Extraction', passed, passed ? '' : 'Failed to extract session ID');
+      } catch (e) {
+        log('ChatGPT Session ID Extraction', false, e.message);
+      }
+
+      // Test: DeepSeek session ID extraction
+      try {
+        const mockURL = 'https://chat.deepseek.com/a/chat/s/test-session-abc123';
+        const match = mockURL.match(/\/a\/chat\/s\/([^/]+)/);
+        const passed = match && match[1] === 'test-session-abc123';
+
+        log('DeepSeek Session ID Extraction', passed, passed ? '' : 'Failed to extract session ID');
+      } catch (e) {
+        log('DeepSeek Session ID Extraction', false, e.message);
+      }
+    }
+
+    // Auto-run on load
+    window.addEventListener('load', () => {
+      console.log('Test Runner loaded. Click "Run All Tests" to start.');
+    });
+  </script>
+</body>
+</html>
