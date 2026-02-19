@@ -6,7 +6,7 @@
   <title>Chatnets</title>
   <style>
     body {
-      width: 320px;
+      width: 340px;
       padding: 16px;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       margin: 0;
@@ -54,27 +54,6 @@
       font-weight: 600;
       color: #333;
     }
-    .input-group {
-      margin-bottom: 12px;
-    }
-    label {
-      display: block;
-      font-size: 12px;
-      color: #666;
-      margin-bottom: 4px;
-    }
-    input[type="text"] {
-      width: 100%;
-      padding: 8px 10px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      font-size: 13px;
-      box-sizing: border-box;
-    }
-    input[type="text"]:focus {
-      outline: none;
-      border-color: #1a73e8;
-    }
     .connection-status {
       display: flex;
       justify-content: space-between;
@@ -104,6 +83,19 @@
     }
     .status-text {
       color: #666;
+    }
+    .save-directory {
+      background: #f8f9fa;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      color: #5f6368;
+      word-break: break-all;
+      margin-bottom: 8px;
+    }
+    .save-directory-label {
+      font-weight: 600;
+      margin-bottom: 4px;
     }
     .actions {
       display: flex;
@@ -148,6 +140,10 @@
       background: #e8f0fe;
       color: #174ea6;
     }
+    .status.error {
+      background: #fce8e6;
+      color: #c5221f;
+    }
     .footer {
       margin-top: 16px;
       padding-top: 12px;
@@ -155,6 +151,11 @@
       font-size: 12px;
       color: #999;
       text-align: center;
+    }
+    .native-info {
+      font-size: 11px;
+      color: #888;
+      margin-top: 4px;
     }
   </style>
 </head>
@@ -175,31 +176,34 @@
   </div>
 
   <div class="section">
-    <div class="section-title">服务器配置</div>
-    <div class="input-group">
-      <label for="server-url">服务器地址</label>
-      <input type="text" id="server-url" placeholder="http://127.0.0.1:8765">
-    </div>
+    <div class="section-title">服务器状态</div>
     <div class="connection-status">
       <span class="status-indicator">
-        <span class="status-dot" id="status-dot"></span>
-        <span class="status-text" id="connection-text">检查中...</span>
+        <span class="status-dot" id="native-status-dot"></span>
+        <span class="status-text" id="native-status-text">检查中...</span>
       </span>
+      <button id="check-native" style="padding: 6px 12px; font-size: 12px;">检查</button>
     </div>
-    <button id="save-settings">保存设置</button>
-    <div id="save-status" class="status" style="display: none;"></div>
+    <div id="save-directory-section" style="display: none;">
+      <div class="save-directory-label">保存目录</div>
+      <div class="save-directory" id="save-directory">-</div>
+      <div class="native-info" id="platform-info"></div>
+    </div>
   </div>
 
   <div class="section">
     <div class="section-title">操作</div>
     <div class="actions">
-      <button id="export-all">导出全部记录</button>
+      <button id="export-all">导出全部记录 (JSON)</button>
       <button id="refresh-stats" class="secondary">刷新统计</button>
+      <button id="init-native" class="secondary">重新连接</button>
     </div>
   </div>
 
+  <div id="action-status" class="status" style="display: none;"></div>
+
   <div class="footer">
-    Chatnets v0.1.0
+    Chatnets v0.2.0
   </div>
 
   <script src="popup.js"></script>

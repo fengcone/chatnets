@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Chatnets - Chat Collector",
-  "version": "0.1.0",
-  "description": "采集聊天记录，构建个人知识图谱",
+  "version": "0.2.0",
+  "description": "采集聊天记录，保存为 Markdown 文件",
   "permissions": [
     "storage",
     "downloads",
@@ -13,8 +13,7 @@
     "https://chat.deepseek.com/*",
     "https://chat.openai.com/*",
     "https://chatgpt.com/*",
-    "http://127.0.0.1/*",
-    "http://localhost/*"
+    "http://127.0.0.1:8766/*"
   ],
   "background": {
     "service_worker": "background.js"

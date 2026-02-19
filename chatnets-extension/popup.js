@@ -1,68 +1,98 @@
 // Chatnets Popup Script
 
-const DEFAULT_SERVER_URL = 'http://127.0.0.1:8765';
+const API_BASE_URL = 'http://127.0.0.1:8766';
 
 // 显示状态消息
-function showSaveStatus(message, type = 'success') {
-  const statusEl = document.getElementById('save-status');
+function showActionStatus(message, type = 'success') {
+  const statusEl = document.getElementById('action-status');
   statusEl.textContent = message;
   statusEl.className = `status ${type}`;
   statusEl.style.display = 'block';
 
   setTimeout(() => {
     statusEl.style.display = 'none';
-  }, 2000);
+  }, 3000);
 }
 
 // 更新连接状态
-function updateConnectionStatus(status, text) {
-  const dot = document.getElementById('status-dot');
-  const textEl = document.getElementById('connection-text');
+function updateServerStatus(status, text) {
+  const dot = document.getElementById('native-status-dot');
+  const textEl = document.getElementById('native-status-text');
 
   dot.className = `status-dot ${status}`;
   textEl.textContent = text;
 }
 
-// 加载设置
-async function loadSettings() {
-  const result = await chrome.storage.local.get(['serverUrl']);
-  const serverUrl = result.serverUrl || DEFAULT_SERVER_URL;
-  document.getElementById('server-url').value = serverUrl;
-  return serverUrl;
-}
-
-// 保存设置
-async function saveSettings() {
-  const serverUrl = document.getElementById('server-url').value.trim() || DEFAULT_SERVER_URL;
-
-  await chrome.storage.local.set({ serverUrl });
-  showSaveStatus('设置已保存', 'success');
-
-  // Notify background to reload server URL
-  chrome.runtime.sendMessage({ type: 'RELOAD_CONFIG' });
-
-  // Check connection after saving
-  setTimeout(checkConnection, 500);
-}
-
-// 检查连接
-async function checkConnection() {
-  const serverUrl = document.getElementById('server-url').value.trim() || DEFAULT_SERVER_URL;
-  updateConnectionStatus('checking', '检查中...');
+// 检查服务器连接
+async function checkServer() {
+  updateServerStatus('checking', '检查中...');
 
   try {
-    const response = await fetch(`${serverUrl}/health`, {
-      method: 'GET',
-      cache: 'no-store'
-    });
+    const response = await chrome.runtime.sendMessage({ type: 'PING_SERVER' });
 
-    if (response.ok) {
-      updateConnectionStatus('connected', '已连接');
+    if (response && response.available) {
+      updateServerStatus('connected', '已连接');
+      await loadServerConfig();
     } else {
-      updateConnectionStatus('disconnected', '连接失败');
+      updateServerStatus('disconnected', '未连接');
+      document.getElementById('save-directory-section').style.display = 'none';
     }
   } catch (error) {
-    updateConnectionStatus('disconnected', '未连接');
+    console.error('[Chatnets] Failed to check server:', error);
+    updateServerStatus('disconnected', '连接失败');
+    document.getElementById('save-directory-section').style.display = 'none';
+  }
+}
+
+// 加载服务器配置
+async function loadServerConfig() {
+  try {
+    const stats = await chrome.runtime.sendMessage({ type: 'GET_STATS' });
+
+    if (stats.serverAvailable && stats.serverConfig) {
+      const config = stats.serverConfig;
+
+      // 显示保存目录
+      document.getElementById('save-directory').textContent =
+        config.save_directory || '未知';
+
+      // 显示平台信息
+      const platforms = [];
+      if (config.platforms) {
+        for (const [name, p] of Object.entries(config.platforms)) {
+          if (p.enabled) platforms.push(name);
+        }
+      }
+      document.getElementById('platform-info').textContent =
+        `支持平台: ${platforms.join(', ') || '无'}`;
+
+      document.getElementById('save-directory-section').style.display = 'block';
+    } else {
+      document.getElementById('save-directory-section').style.display = 'none';
+    }
+  } catch (error) {
+    console.error('[Chatnets] Failed to load server config:', error);
+  }
+}
+
+// 初始化服务器连接
+async function initServer() {
+  showActionStatus('正在连接...', 'info');
+
+  try {
+    const response = await chrome.runtime.sendMessage({ type: 'INIT_SERVER' });
+
+    if (response.success) {
+      showActionStatus('连接成功！', 'success');
+      await checkServer();
+    } else {
+      showActionStatus('连接失败，请确保 chatnets-native 正在运行', 'error');
+      updateServerStatus('disconnected', '连接失败');
+    }
+  } catch (error) {
+    console.error('[Chatnets] Failed to init server:', error);
+    showActionStatus('请先启动 chatnets-native 程序', 'error');
+    updateServerStatus('disconnected', '未启动');
   }
 }
 
@@ -73,6 +103,11 @@ async function updateStats() {
 
     document.getElementById('session-count').textContent = response.sessionCount || 0;
     document.getElementById('message-count').textContent = response.messageCount || 0;
+
+    // 如果服务器可用，更新配置显示
+    if (response.serverAvailable) {
+      await loadServerConfig();
+    }
   } catch (error) {
     console.error('[Chatnets] Failed to get stats:', error);
     document.getElementById('session-count').textContent = '?';
@@ -83,23 +118,23 @@ async function updateStats() {
 // 导出所有数据
 async function exportAllData() {
   try {
-    showSaveStatus('正在导出...', 'info');
+    showActionStatus('正在导出...', 'info');
     await chrome.runtime.sendMessage({ type: 'EXPORT_ALL' });
-    showSaveStatus('导出成功！', 'success');
+    showActionStatus('导出成功！', 'success');
   } catch (error) {
     console.error('[Chatnets] Export failed:', error);
-    showSaveStatus('导出失败', 'info');
+    showActionStatus('导出失败', 'error');
   }
 }
 
 // 初始化
 document.addEventListener('DOMContentLoaded', async () => {
-  await loadSettings();
   await updateStats();
-  await checkConnection();
+  await checkServer();
 });
 
 // 事件监听
-document.getElementById('save-settings').addEventListener('click', saveSettings);
 document.getElementById('export-all').addEventListener('click', exportAllData);
 document.getElementById('refresh-stats').addEventListener('click', updateStats);
+document.getElementById('check-native').addEventListener('click', checkServer);
+document.getElementById('init-native').addEventListener('click', initServer);

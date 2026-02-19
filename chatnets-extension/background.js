@@ -1,34 +1,29 @@
 // Chatnets Background Service Worker
-// 负责：接收消息、存储管理、导出数据、与本地服务通信
+// 负责：接收消息、存储管理、通过 HTTP API 导出到本地文件
 
 const STORAGE_KEY = 'chatnets_deepseek_v1';
-const DEFAULT_SERVER_URL = 'http://127.0.0.1:8765';
-let serverUrl = DEFAULT_SERVER_URL;
+const API_BASE_URL = 'http://127.0.0.1:8766';
 
-// Load server URL from storage
-async function loadServerUrl() {
-  const result = await chrome.storage.local.get(['serverUrl']);
-  if (result.serverUrl) {
-    serverUrl = result.serverUrl;
-    console.log('[Chatnets] Server URL loaded:', serverUrl);
+// Native messaging state
+let serverAvailable = false;
+let serverConfig = null;
+
+// 初始化与本地服务器的连接
+async function initServer() {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/config`);
+    if (response.ok) {
+      const data = await response.json();
+      serverAvailable = true;
+      serverConfig = data;
+      console.log('[Chatnets] Server connected:', data);
+      return data;
+    }
+  } catch (error) {
+    console.log('[Chatnets] Server not available:', error.message);
+    serverAvailable = false;
+    return null;
   }
-}
-
-// Transform extension message format to backend API format
-// Extension uses camelCase (sessionId, messageId, createdAt, order)
-// Backend expects snake_case (session_id, id, created_at, order_in_session)
-function transformMessageForAPI(msg) {
-  return {
-    id: msg.messageId,
-    session_id: msg.sessionId,
-    role: msg.role, // Already 'user' or 'assistant'
-    content: msg.content,
-    created_at: msg.createdAt,
-    order_in_session: msg.order,
-    url: msg.url,
-    title: msg.title,
-    process_status: 'pending'
-  };
 }
 
 // 初始化存储结构
@@ -42,6 +37,18 @@ async function initStorage() {
       }
     });
   }
+}
+
+// Transform extension message format to API format
+function transformMessageForAPI(msg) {
+  return {
+    platform: msg.platform,
+    session_id: msg.sessionId,
+    title: msg.title || 'Chat Session',
+    timestamp: msg.createdAt,
+    role: msg.role,
+    content: msg.content
+  };
 }
 
 // 处理新消息
@@ -72,28 +79,43 @@ async function handleNewMessages(messages) {
 
   await chrome.storage.local.set({ [STORAGE_KEY]: data });
 
-  // 尝试同步到本地服务（如果可用）
-  trySync(messages);
+  // 尝试通过 HTTP API 写入本地文件
+  tryHTTPWrite(messages);
 }
 
-// 尝试同步到本地服务
-async function trySync(messages) {
-  try {
-    // Transform messages to backend API format before sending
-    const apiMessages = messages.map(transformMessageForAPI);
+// 尝试通过 HTTP API 写入本地文件
+async function tryHTTPWrite(messages) {
+  // 如果服务器还未初始化，先尝试初始化
+  if (!serverAvailable && serverConfig === null) {
+    await initServer();
+  }
 
-    const response = await fetch(`${serverUrl}/api/v1/ingest/messages`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ source: 'deepseek', messages: apiMessages })
-    });
+  // 如果仍然不可用，跳过
+  if (!serverAvailable) {
+    console.log('[Chatnets] Server not available, storing locally only');
+    return;
+  }
 
-    if (response.ok) {
-      console.log('[Chatnets] Synced to local server');
+  // 逐条写入消息
+  for (const msg of messages) {
+    try {
+      const apiMsg = transformMessageForAPI(msg);
+      const response = await fetch(`${API_BASE_URL}/api/write`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(apiMsg)
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('[Chatnets] Message written to file:', result.file_path);
+      }
+    } catch (error) {
+      console.warn('[Chatnets] Failed to write message via HTTP:', error);
+      // 标记服务器不可用，避免重复尝试
+      serverAvailable = false;
+      break;
     }
-  } catch (error) {
-    // 本地服务不可用，仅存储在浏览器中
-    console.log('[Chatnets] Local server not available, stored locally only');
   }
 }
 
@@ -116,7 +138,6 @@ async function exportAllData() {
       type: 'application/json'
     });
 
-    // Service Worker 中 URL.createObjectURL 可能受限，尝试使用 Reader 转换 DataURL
     const reader = new FileReader();
     reader.onload = function () {
       chrome.downloads.download({
@@ -141,36 +162,16 @@ async function getStats() {
 
   return {
     sessionCount: Object.keys(data.sessions).length,
-    messageCount: Object.keys(data.messages).length
+    messageCount: Object.keys(data.messages).length,
+    serverAvailable: serverAvailable,
+    serverConfig: serverConfig
   };
 }
 
-// 处理会话结束事件 - 触发 AI pipeline 处理
+// 处理会话结束事件
 async function handleSessionEnd(payload) {
   console.log('[Chatnets] Session end detected:', payload);
-
-  // Trigger pipeline on backend server
-  try {
-    const response = await fetch(`${serverUrl}/api/v1/pipeline/trigger`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        session_id: payload.sessionId,
-        trigger_by: payload.trigger || 'auto_session_end'
-      })
-    });
-
-    if (response.ok) {
-      const result = await response.json();
-      console.log('[Chatnets] Pipeline triggered:', result);
-      return result;
-    } else {
-      console.warn('[Chatnets] Pipeline trigger failed:', response.status);
-    }
-  } catch (error) {
-    // 本地服务不可用，静默忽略
-    console.log('[Chatnets] Local server not available for pipeline trigger');
-  }
+  return { success: true };
 }
 
 // 监听消息
@@ -181,17 +182,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     handleNewMessages(message.payload.messages).then(() => {
       sendResponse({ success: true });
     });
-    return true; // 异步响应
+    return true;
   }
 
   if (message.type === 'SESSION_END') {
-    handleSessionEnd(message.payload).then(() => {
-      sendResponse({ success: true });
+    handleSessionEnd(message.payload).then((result) => {
+      sendResponse(result);
     }).catch((err) => {
       console.warn('[Chatnets] Session end handler failed:', err);
       sendResponse({ success: false, error: err.message });
     });
-    return true; // 异步响应
+    return true;
   }
 
   if (message.type === 'EXPORT_ALL') {
@@ -208,10 +209,26 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  if (message.type === 'RELOAD_CONFIG') {
-    loadServerUrl().then(() => {
-      sendResponse({ success: true });
+  if (message.type === 'INIT_SERVER') {
+    initServer().then((config) => {
+      sendResponse({ success: true, config: config });
+    }).catch((err) => {
+      sendResponse({ success: false, error: err.message });
     });
+    return true;
+  }
+
+  if (message.type === 'PING_SERVER') {
+    fetch(`${API_BASE_URL}/api/ping`)
+      .then(res => res.json())
+      .then(() => {
+        serverAvailable = true;
+        sendResponse({ available: true });
+      })
+      .catch(() => {
+        serverAvailable = false;
+        sendResponse({ available: false });
+      });
     return true;
   }
 
@@ -220,6 +237,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 // 初始化
-Promise.all([initStorage(), loadServerUrl()]).then(() => {
+Promise.all([initStorage(), initServer()]).then(() => {
   console.log('[Chatnets] Background service worker initialized');
+  console.log('[Chatnets] Server available:', serverAvailable);
 });
