@@ -40,7 +40,7 @@ Chatnets 由三个组件组成，协同工作：
 
 1. 克隆项目：
    ```bash
-   git clone https://github.com/fengjianhui/chatnets.git
+   git clone https://github.com/fengcone/chatnets.git
    cd chatnets
    ```
 
@@ -226,7 +226,7 @@ emptyDir 是 Kubernetes 中一种 Pod 级别的临时存储卷...
 ### 1. 安装 Chrome 扩展
 
 ```bash
-git clone https://github.com/fengjianhui/chatnets.git
+git clone https://github.com/fengcone/chatnets.git
 # 在 chrome://extensions/ 加载 chatnets-extension 目录
 ```
 

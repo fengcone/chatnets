@@ -1,7 +1,7 @@
 ---
 name: chatnets-obsidian
 description: 将 Chatnets 采集的 AI 对话记录整理为 Obsidian Zettelkasten 知识库。支持增量处理、费曼学习模式识别、原子笔记生成、双向链接和 MOC。
-author: fengjianhui
+author: fengcone
 version: 1.0.0
 ---
 
