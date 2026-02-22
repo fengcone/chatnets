@@ -85,7 +85,7 @@ make build      # 构建二进制文件
 
 ```yaml
 # 对话保存目录
-save_directory: "/Users/xxx/Chatnets/chatnets-vault/_chats"
+save_directory: "/Users/xxx/Chatnets/chatnets-vault/chats"
 
 # Obsidian vault 路径
 obsidian_vault: "/Users/xxx/Chatnets/chatnets-vault"
@@ -105,17 +105,15 @@ log_level: info
 
 ### 输出结构
 
-对话文件按平台和日期组织：
+对话文件按平台组织：
 
 ```
 {save_directory}/
 ├── deepseek/
-│   └── 2026-02-19/
-│       ├── Kubernetes存储.md
-│       └── Go并发编程.md
+│   ├── Kubernetes存储.md
+│   └── Go并发编程.md
 └── chatgpt/
-    └── 2026-02-19/
-        └── React优化.md
+    └── React优化.md
 ```
 
 ### API 端点
@@ -151,7 +149,7 @@ ln -s /path/to/chatnets/chatnets-obsidian ~/.claude/skills/chatnets-obsidian
 Skill 会自动执行：
 
 1. 读取配置文件 `~/.chatnets/config.yaml`
-2. 读取状态文件 `{vault}/_meta/obsidian-state.yaml`
+2. 读取状态文件 `{vault}/meta/obsidian-state.yaml`
 3. 扫描对话目录，检测增量内容
 4. 使用 AI 分析对话，识别费曼学习模式
 5. 生成/更新原子概念笔记
@@ -173,15 +171,15 @@ Skill 只对**完整的费曼学习片段**提取概念：
 
 ```
 {obsidian_vault}/
-├── _chats/           # 原始对话（带锚点）
+├── chats/           # 原始对话（带锚点）
 │   ├── deepseek/
 │   └── chatgpt/
-├── _concepts/        # 原子概念笔记
+├── concepts/        # 原子概念笔记
 │   ├── emptyDir.md
 │   └── PV持久化.md
-├── _mocs/            # 概念地图
+├── mocs/            # 概念地图
 │   └── Kubernetes存储.md
-└── _meta/            # 元数据和状态
+└── meta/            # 元数据和状态
     └── obsidian-state.yaml
 ```
 

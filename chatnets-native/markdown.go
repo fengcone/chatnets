@@ -6,14 +6,15 @@ import (
 )
 
 // formatMessage formats a chat message as markdown
-func formatMessage(data *Data) string {
+func formatMessage(data *Data, messageIndex int) string {
 	role := capitalize(data.Role)
 	timestamp := data.Timestamp.Format("15:04:05")
 
 	// Escape markdown special characters in content
 	content := escapeMarkdown(data.Content)
 
-	return fmt.Sprintf("## [%s] %s\n\n%s", timestamp, role, content)
+	// 使用 Obsidian 锚点格式：标题 ^message-N（锚点必须在标题末尾）
+	return fmt.Sprintf("## [%s] %s ^message-%d\n\n%s", timestamp, role, messageIndex, content)
 }
 
 // escapeMarkdown escapes markdown special characters

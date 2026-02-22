@@ -61,9 +61,9 @@ func LoadConfig() (*Config, error) {
 	// Set defaults for missing values
 	if config.SaveDirectory == "" {
 		homeDir, _ := os.UserHomeDir()
-		// Default to vault/_chats directory if obsidian_vault is set
+		// Default to vault/chats directory if obsidian_vault is set
 		if config.ObsidianVault != "" {
-			config.SaveDirectory = filepath.Join(config.ObsidianVault, "_chats")
+			config.SaveDirectory = filepath.Join(config.ObsidianVault, "chats")
 		} else {
 			config.SaveDirectory = filepath.Join(homeDir, "Chatnets")
 		}
@@ -116,7 +116,7 @@ func DefaultConfig() *Config {
 	homeDir, _ := os.UserHomeDir()
 	vaultPath := filepath.Join(homeDir, "Chatnets/chatnets-vault")
 	return &Config{
-		SaveDirectory: filepath.Join(vaultPath, "_chats"),
+		SaveDirectory: filepath.Join(vaultPath, "chats"),
 		ObsidianVault: vaultPath,
 		Platforms: map[string]Platform{
 			"deepseek": {Enabled: true},

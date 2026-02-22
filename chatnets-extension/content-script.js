@@ -9,6 +9,35 @@
   let scanTimeout = null;
   let isScanning = false;
 
+  // Storage key for sent message IDs (persistent across page reloads)
+  const STORAGE_KEY = 'chatnets_sent_messages_v1';
+  let sentMessageIds = new Set(); // In-memory cache
+
+  // Load sent message IDs from chrome.storage
+  function loadSentMessageIds() {
+    chrome.storage.local.get([STORAGE_KEY], (result) => {
+      if (result[STORAGE_KEY]) {
+        sentMessageIds = new Set(result[STORAGE_KEY]);
+        console.log(`[Chatnets] Loaded ${sentMessageIds.size} sent message IDs from storage`);
+      }
+    });
+  }
+
+  // Save message ID to chrome.storage
+  function saveMessageId(messageId) {
+    sentMessageIds.add(messageId);
+    chrome.storage.local.set({ [STORAGE_KEY]: Array.from(sentMessageIds) }, () => {
+      if (chrome.runtime.lastError) {
+        console.warn('[Chatnets] Failed to save message ID:', chrome.runtime.lastError);
+      }
+    });
+  }
+
+  // Check if message was already sent
+  function isMessageSent(messageId) {
+    return sentMessageIds.has(messageId);
+  }
+
   // 检查 Extension Context 是否有效
   function isExtensionContextValid() {
     try {
@@ -124,6 +153,12 @@
         if (!content || content.length < 2) return;
 
         const messageId = makeMessageId(sessionId, 'user', content);
+
+        // 使用持久化去重：检查是否已发送
+        if (isMessageSent(messageId)) {
+          return; // 跳过已发送的消息
+        }
+
         messages.push({
           platform: PLATFORM,
           sessionId,
@@ -161,6 +196,12 @@
         if (!content || content.length < 2) return;
 
         const messageId = makeMessageId(sessionId, 'assistant', content);
+
+        // 使用持久化去重：检查是否已发送
+        if (isMessageSent(messageId)) {
+          return; // 跳过已发送的消息
+        }
+
         messages.push({
           platform: PLATFORM,
           sessionId,
@@ -176,9 +217,13 @@
       });
 
       if (messages.length > 0) {
-        console.log(`[Chatnets] Extracted ${messages.length} messages`);
+        // 按 order 排序，确保消息顺序正确
+        messages.sort((a, b) => a.order - b.order);
+        console.log(`[Chatnets] Extracted ${messages.length} messages, sorted by order`);
 
-        // 再次检查 Context，防止异步期间失效
+        // 保存消息 ID 到持久化存储（在发送前保存，确保不重复）
+        messages.forEach(msg => saveMessageId(msg.messageId));
+
         // 再次检查 Context，防止异步期间失效
         if (isExtensionContextValid()) {
           try {
@@ -408,6 +453,9 @@
       });
     }
   });
+
+  // Initialize: load sent message IDs from storage
+  loadSentMessageIds();
 
   console.log('[Chatnets] Content script loaded on DeepSeek');
 })();
