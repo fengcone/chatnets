@@ -1,232 +1,41 @@
 # Chatnets
 
-> 将 AI 对话转化为知识库的完整解决方案
+> 将 AI 对话转化为 Obsidian Zettelkasten 知识库
 
-Chatnets 是一个开源工具，帮助你采集 AI 对话记录（DeepSeek、ChatGPT）并将其转化为 Obsidian Zettelkasten 知识库。
+Chatnets 是一个开源工具，采集 AI 对话记录（DeepSeek、ChatGPT），通过识别费曼学习模式，自动转化为结构化的 Obsidian 知识库。
 
-## ✨ 核心特性
+## 核心理念
 
-- **🌐 多平台采集** - 支持 DeepSeek 和 ChatGPT
-- **🔄 自动同步** - 浏览器扩展 + 本地服务器，实时保存
-- **🧠 费曼学习识别** - 智能识别"提问→回答→复述"的学习模式
-- **📝 原子笔记生成** - 自动提取知识点，生成独立概念笔记
-- **🔗 双向链接** - 概念↔对话、概念↔概念的完整链接体系
-- **🗺️ MOC 自动生成** - 构建知识地图，导航学习路径
-- **📦 增量处理** - 只处理新增内容，高效更新
+**费曼学习法** = 提问 → 回答 → 复述理解
 
-## 📦 组件概览
+Chatnets 只提取用户主动确认理解的知识点，确保每个概念都是真正"学会"的内容。
 
-Chatnets 由三个组件组成，协同工作：
+## 特性
 
-```
-┌─────────────────┐      ┌─────────────────┐      ┌─────────────────┐
-│  Chrome 扩展     │ ──▶  │  本地文件服务     │ ──▶  │  Claude Skill  │
-│  (数据采集)      │      │  (保存对话)       │      │  (构建知识库)    │
-└─────────────────┘      └─────────────────┘      └─────────────────┘
-```
+- **多平台采集** - 支持 DeepSeek 和 ChatGPT
+- **实时同步** - 浏览器扩展自动保存对话为 Markdown
+- **费曼模式识别** - 智能识别"提问→回答→复述"的学习三元组
+- **原子笔记** - 每个概念一个文件，支持双向链接
+- **MOC 地图** - 自动构建知识导航
 
----
-
-## 1️⃣ Chrome 扩展
-
-采集 AI 对话记录，实时同步到本地。
-
-### 支持平台
-
-- [DeepSeek](https://chat.deepseek.com)
-- [ChatGPT](https://chatgpt.com)
-
-### 安装步骤
-
-1. 克隆项目：
-   ```bash
-   git clone https://github.com/fengcone/chatnets.git
-   cd chatnets
-   ```
-
-2. 打开 Chrome 扩展管理页面：
-   - 在地址栏输入 `chrome://extensions/`
-   - 开启右上角的"开发者模式"
-
-3. 加载扩展：
-   - 点击"加载已解压的扩展程序"
-   - 选择 `chatnets-extension` 目录
-
-### 使用方式
-
-- 访问 DeepSeek 或 ChatGPT 进行对话
-- 扩展自动监听页面变化，提取对话消息
-- 点击扩展图标查看统计信息
-
----
-
-## 2️⃣ 本地文件服务
-
-接收 Chrome 扩展数据，将对话保存为 Markdown 文件。
-
-### 构建
-
-```bash
-cd chatnets-native
-make deps        # 下载依赖
-make build      # 构建二进制文件
-```
-
-### 运行
-
-```bash
-./chatnets-native
-# 服务运行在 http://127.0.0.1:8766
-```
-
-### 配置文件
-
-配置文件位于 `~/.chatnets/config.yaml`：
-
-```yaml
-# 对话保存目录
-save_directory: "/Users/xxx/Chatnets/chatnets-vault/chats"
-
-# Obsidian vault 路径
-obsidian_vault: "/Users/xxx/Chatnets/chatnets-vault"
-
-# 启用的平台
-platforms:
-  deepseek:
-    enabled: true
-  chatgpt:
-    enabled: true
-
-# HTTP 服务配置
-http_port: 8766
-http_enabled: true
-log_level: info
-```
-
-### 输出结构
-
-对话文件按平台组织：
+## 架构
 
 ```
-{save_directory}/
-├── deepseek/
-│   ├── Kubernetes存储.md
-│   └── Go并发编程.md
-└── chatgpt/
-    └── React优化.md
+┌─────────────┐      ┌──────────────┐      ┌──────────────┐
+│ Chrome 扩展  │ ──▶  │ 本地服务      │ ──▶  │ Claude Skill │
+│ 采集对话     │      │ 保存 Markdown │      │ 构建知识库     │
+└─────────────┘      └──────────────┘      └──────────────┘
 ```
 
-### API 端点
-
-| 端点 | 方法 | 说明 |
-|------|------|------|
-| `/api/ping` | GET | 健康检查 |
-| `/api/config` | GET | 获取配置 |
-| `/api/status` | GET | 服务状态 |
-| `/api/write` | POST | 保存对话消息 |
-
----
-
-## 3️⃣ Claude Code Skill
-
-将对话转化为 Obsidian Zettelkasten 知识库。
-
-### 安装 Skill
-
-```bash
-# 创建符号链接到 Claude Code skills 目录
-ln -s /path/to/chatnets/chatnets-obsidian ~/.claude/skills/chatnets-obsidian
-```
-
-### 使用方式
-
-在 Claude Code 对话中输入：
-
-```
-/chatnets-obsidian
-```
-
-Skill 会自动执行：
-
-1. 读取配置文件 `~/.chatnets/config.yaml`
-2. 读取状态文件 `{vault}/meta/obsidian-state.yaml`
-3. 扫描对话目录，检测增量内容
-4. 使用 AI 分析对话，识别费曼学习模式
-5. 生成/更新原子概念笔记
-6. 建立 Obsidian 双向链接
-7. 更新 MOC（概念地图）
-
-### 费曼学习模式
-
-Skill 只对**完整的费曼学习片段**提取概念：
-
-```
-用户提问 → AI 回答 → 用户复述理解
-```
-
-- ✅ 提取概念：用户主动询问的名词、术语
-- ❌ 不提取：AI 回复中的额外概念（用户未必阅读）
-
-### 输出结构
-
-```
-{obsidian_vault}/
-├── chats/           # 原始对话（带锚点）
-│   ├── deepseek/
-│   └── chatgpt/
-├── concepts/        # 原子概念笔记
-│   ├── emptyDir.md
-│   └── PV持久化.md
-├── mocs/            # 概念地图
-│   └── Kubernetes存储.md
-└── meta/            # 元数据和状态
-    └── obsidian-state.yaml
-```
-
-### 概念笔记示例
-
-```markdown
----
-type: concept
-created: 2026-02-19T10:00:00Z
-aliases: ["临时存储"]
-tags: [kubernetes, storage]
-source_session: "xxx"
-source_platform: "deepseek"
----
-
-# emptyDir
-
-## 定义
-
-emptyDir 是 Kubernetes 中一种 Pod 级别的临时存储卷...
-
-## 学习来源
-
-### 原始对话
-- **Obsidian**: [[Kubernetes存储#^message-5]]
-- **网页**: https://chat.deepseek.com/a/chat/s/xxx
-
-### 费曼学习路径
-1. [[Kubernetes存储#^message-5]]: 用户首次提问
-2. [[Kubernetes存储#^message-7]]: 用户复述理解
-
-## 相关概念
-
-- [[PV持久化]]
-- [[容器可写层]]
-```
-
----
-
-## 🚀 快速开始
+## 快速开始
 
 ### 1. 安装 Chrome 扩展
 
 ```bash
 git clone https://github.com/fengcone/chatnets.git
-# 在 chrome://extensions/ 加载 chatnets-extension 目录
 ```
+
+在 Chrome 打开 `chrome://extensions/`，开启"开发者模式"，加载 `chatnets-extension` 目录。
 
 ### 2. 运行本地服务
 
@@ -238,44 +47,89 @@ make build
 
 ### 3. 使用 Claude Code Skill
 
+```bash
+ln -s /path/to/chatnets/chatnets-obsidian ~/.claude/skills/chatnets-obsidian
+```
+
+在 Claude Code 中输入：
+
 ```
 /chatnets-obsidian
 ```
 
 ### 4. 用 Obsidian 打开 Vault
 
-将 `obsidian_vault` 目录（默认 `~/Chatnets/chatnets-vault`）在 Obsidian 中打开。
+配置 `~/.chatnets/config.yaml` 中的 `obsidian_vault` 路径，在 Obsidian 中打开该目录。
 
----
+## 输出示例
 
-## 📁 项目结构
+### 原始对话
 
-```
-chatnets/
-├── chatnets-extension/    # Chrome 扩展
-│   ├── manifest.json
-│   ├── background.js
-│   ├── content-script.js
-│   └── popup.html
-├── chatnets-native/       # Go 后端服务
-│   ├── main.go
-│   ├── config.go
-│   ├── handler.go
-│   ├── writer.go
-│   └── Makefile
-├── chatnets-obsidian/     # Claude Code Skill
-│   └── skill.md
-└── example/               # 示例对话文件
+```markdown
+## [10:30:15] User ^message-1
+
+runc 和 containerd 的关系是什么？
+
+## [10:30:16] Assistant ^message-2
+
+containerd 创建 shim 进程来管理 runc...
+
+## [10:30:20] User ^message-3
+
+我理解一下，所以 containerd 创建 shim 进程来管理 runc 的生命周期...
 ```
 
+### 生成的概念笔记
+
+```markdown
+---
+type: concept
+tags: [kubernetes, container]
+source_session: "xxx"
 ---
 
-## 🤝 贡献
+# containerd
 
-欢迎提交 Issue 和 Pull Request！
+## 定义
 
----
+containerd 是一个容器运行时，通过 shim 进程管理 runc...
 
-## 📄 许可证
+## 学习来源
 
-MIT License
+- [[容器架构#^message-2]]: AI 解释
+- [[容器架构#^message-3]]: 我的理解
+
+## 相关概念
+
+- [[runc]]
+- [[shim]]
+```
+
+## 配置
+
+`~/.chatnets/config.yaml`:
+
+```yaml
+save_directory: "~/Chatnets/chatnets-vault/chats"
+obsidian_vault: "~/Chatnets/chatnets-vault"
+
+platforms:
+  deepseek:
+    enabled: true
+  chatgpt:
+    enabled: true
+
+http_port: 8766
+```
+
+## 组件
+
+| 组件 | 功能 | 技术 |
+|------|------|------|
+| Chrome 扩展 | 监听页面、提取对话 | JavaScript, MutationObserver |
+| 本地服务 | 保存 Markdown 文件 | Go, HTTP API |
+| Claude Skill | 构建知识库 | Claude Code, YAML |
+
+## 许可证
+
+[MIT](LICENSE)
