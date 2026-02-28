@@ -85,6 +85,9 @@ func escapeMarkdown(text string) string {
 	// We're conservative and only escape when necessary for code blocks etc.
 	// For general text, we leave most characters alone
 
+	// First, escape all markdown links to prevent Obsidian from creating graph connections
+	text = escapeMarkdownLinks(text)
+
 	// Handle code blocks - don't escape content inside code blocks
 	var result strings.Builder
 	inCodeBlock := false
@@ -100,6 +103,43 @@ func escapeMarkdown(text string) string {
 			// Escape certain characters outside code blocks
 			line = strings.ReplaceAll(line, "<", "&lt;")
 			line = strings.ReplaceAll(line, ">", "&gt;")
+		}
+
+		result.WriteString(line)
+		if i < len(lines)-1 {
+			result.WriteString("\n")
+		}
+	}
+
+	return result.String()
+}
+
+// escapeMarkdownLinks escapes all markdown link syntax [text](url) to prevent Obsidian
+// from recognizing them as wiki links or creating graph connections
+func escapeMarkdownLinks(text string) string {
+	// Use regex to find all markdown links: [text](url)
+	// We need to be careful to:
+	// 1. Not escape links inside code blocks
+	// 2. Handle nested brackets correctly
+	// 3. Handle multi-line links (though rare)
+
+	var result strings.Builder
+	inCodeBlock := false
+	lines := strings.Split(text, "\n")
+
+	// Regex to match markdown links: [any text](any url)
+	// Uses non-greedy matching to handle multiple links per line
+	linkRegex := regexp.MustCompile(`\[([^\]]+)\]\(([^)]+)\)`)
+
+	for i, line := range lines {
+		trimmed := strings.TrimLeft(line, " \t")
+		if strings.HasPrefix(trimmed, "```") {
+			inCodeBlock = !inCodeBlock
+		}
+
+		if !inCodeBlock {
+			// Escape markdown links by replacing [ with \[ and ] with \]
+			line = linkRegex.ReplaceAllString(line, `\\[$1\\]($2)`)
 		}
 
 		result.WriteString(line)
