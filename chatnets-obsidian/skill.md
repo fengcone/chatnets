@@ -353,7 +353,7 @@ created: 2026-02-21T10:00:00Z
 aliases: ["简短别名", "英文名"]
 tags: [kubernetes, storage]
 source_chat: ["对话名1","对话名2"]
-source_url: ["[对话名1](https://chat.deepseek.com/a/chat/s/{session_id})", "[对话名2](https://chatgpt.com/c/{session_id})"]
+source_url: ["[对话名1](https://chat.deepseek.com/a/chat/s/{session_id})", "[对话名2](https://chatgpt.com/c/{session_id})", "[对话名3](https://deepwiki.com/search/_{session_id})"]
 ---
 
 # 概念名
@@ -401,7 +401,8 @@ created: 2026-02-21T10:00:00Z
 ## 相关对话
 
 - [[对话名]] - [在线查看](https://chat.deepseek.com/a/chat/s/{session_id})
-- [[对话2]] - [在线查看](https://chat.deepseek.com/a/chat/s/{session_id2})
+- [[对话2]] - [在线查看](https://chatgpt.com/c/{session_id2})
+- [[对话3]] - [在线查看](https://deepwiki.com/search/_{session_id3})
 ```
 
 ---
@@ -424,6 +425,15 @@ conversations:
     concepts_extracted:
       - 概念1
       - 概念2
+  - file_path: "deepwiki/alibaba_ROCK.md"
+    session_id: "ba6a68f8-4c5c-4722-b8e0-ccf2959fdb1e"
+    web_url: "https://deepwiki.com/search/_ba6a68f8-4c5c-4722-b8e0-ccf2959fdb1e"
+    title: "alibaba/ROCK"
+    platform: "deepwiki"
+    last_message_anchor: 10
+    last_processed_line: 320
+    concepts_extracted:
+      - 概念3
 
 concepts:
   - id: "概念1"
@@ -480,3 +490,9 @@ aliases: ["OCI", "Open Container Initiative"]  # 支持简短别名
 |------|-------------|------|
 | DeepSeek | `https://chat.deepseek.com/a/chat/s/{session_id}` | `https://chat.deepseek.com/a/chat/s/abc123` |
 | ChatGPT | `https://chatgpt.com/c/{session_id}` | `https://chatgpt.com/c/abc123` |
+| DeepWiki | `https://deepwiki.com/search/_{session_id}` | `https://deepwiki.com/search/_ba6a68f8-4c5c-4722-b8e0-ccf2959fdb1e` |
+
+**DeepWiki URL 说明**：
+- 完整URL格式：`https://deepwiki.com/search/_{session_id}?mode=fast`
+- session_id 前需要添加下划线 `_`
+- 可选参数 `?mode=fast` 用于指定搜索模式，生成链接时可省略

@@ -116,20 +116,47 @@ func (w *Writer) getOrCreateFilePath(dir string, data *Data) string {
 	if exists {
 		// Verify file still exists
 		if _, err := os.Stat(existingPath); err == nil {
+			// File exists and is mapped to this sessionID
+			// Update session title in metadata if it has changed
+			w.mu.Lock()
+			if meta, ok := w.sessionMeta[data.SessionID]; ok && meta.Title != data.Title {
+				log.Printf("[Chatnets] Session title changed for %s: %s -> %s", 
+					data.SessionID, meta.Title, data.Title)
+				meta.Title = data.Title
+			}
+			w.mu.Unlock()
 			return existingPath
 		}
+		// File was deleted, remove from index
+		w.mu.Lock()
+		delete(w.fileIndex, data.SessionID)
+		w.mu.Unlock()
 	}
 
 	// Generate filename from title
 	filename := sanitizeFilename(data.Title) + ".md"
 	filePath := filepath.Join(dir, filename)
 
-	// Handle duplicates
+	// Handle duplicates: check if file exists with same name but different sessionID
 	counter := 1
 	for {
 		if _, err := os.Stat(filePath); os.IsNotExist(err) {
+			// File doesn't exist, we can use this path
 			break
 		}
+		
+		// File exists - check if it belongs to a different session
+		existingSessionID := w.getSessionIDFromFile(filePath)
+		if existingSessionID == data.SessionID {
+			// Same session! This file should be reused
+			log.Printf("[Chatnets] Found existing file for sessionID %s: %s", data.SessionID, filePath)
+			w.mu.Lock()
+			w.fileIndex[data.SessionID] = filePath
+			w.mu.Unlock()
+			return filePath
+		}
+		
+		// Different session with same title - add counter suffix
 		base := sanitizeFilename(data.Title)
 		filename = fmt.Sprintf("%s_%d.md", base, counter)
 		filePath = filepath.Join(dir, filename)
@@ -137,6 +164,15 @@ func (w *Writer) getOrCreateFilePath(dir string, data *Data) string {
 	}
 
 	return filePath
+}
+
+// getSessionIDFromFile extracts sessionID from an existing file
+func (w *Writer) getSessionIDFromFile(filePath string) string {
+	content, err := os.ReadFile(filePath)
+	if err != nil {
+		return ""
+	}
+	return extractSessionIDFromMeta(string(content))
 }
 
 // writeNewFile writes a new file with header and first message
@@ -212,7 +248,7 @@ func (w *Writer) appendToFile(filePath string, data *Data, message string) error
 	contentStr = re.ReplaceAllString(contentStr, "")
 
 	// Append new message and updated metadata
-	newContent := contentStr + fmt.Sprintf("\n---\n\n%s\n\n%s", message, newMetaComment)
+	newContent := contentStr + fmt.Sprintf("\n\n---\n\n%s\n\n%s", message, newMetaComment)
 
 	return os.WriteFile(filePath, []byte(newContent), 0644)
 }

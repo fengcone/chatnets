@@ -65,7 +65,51 @@
 
   // 获取会话标题
   function getSessionTitle() {
-    // 尝试从页面标题获取
+    // 优先尝试从页面中提取仓库名字（例如 "alibaba/OpenSandbox"）作为文件名
+    // 根据 DeepWiki 页面结构，仓库名字通常在顶部的返回链接或包屑导航中
+    let repoName = '';
+
+    // 策略 1: 从 URL 中提取仓库名（最稳定）
+    // URL pattern: https://deepwiki.com/search/alibaba_OpenSandbox_<uuid>
+    const urlMatch = window.location.pathname.match(/\/search\/([^_]+_[^_]+)_[a-f0-9\-]+/i);
+    if (urlMatch && urlMatch[1]) {
+      // 将下划线替换为斜杠，还原仓库名格式
+      repoName = urlMatch[1].replace(/_/g, '/');
+    }
+
+    // 策略 2: 寻找带有返回箭头特征的标签 (类似于 ← alibaba/OpenSandbox)
+    if (!repoName) {
+      const links = document.querySelectorAll('a, button, div.cursor-pointer, span.cursor-pointer');
+      for (const el of links) {
+        const text = el.innerText || '';
+        // 常见特征：带有左箭头符号或直接符合 字母/字母 格式的短文本
+        if ((text.includes('←') || text.includes('<-') || text.includes('back to')) && text.includes('/')) {
+          const parts = text.split(/[\s←]+/).filter(p => p.includes('/'));
+          if (parts.length > 0) {
+            repoName = parts[0].trim();
+            break;
+          }
+        }
+      }
+    }
+
+    // 策略 3: 查找页面上所有符合 owner/repo 格式但没带箭头的显眼文本 (限制长度以防提取到长句)
+    if (!repoName) {
+      const possibleRepos = Array.from(document.querySelectorAll('h1, h2, h3, a, span'))
+        .map(el => (el.innerText || '').trim())
+        .filter(text => text.includes('/') && text.length > 3 && text.length < 50 && !text.includes(' ') && text.split('/').length === 2);
+
+      if (possibleRepos.length > 0) {
+        repoName = possibleRepos[0]; // 提取到的第一个最可能是仓库名
+      }
+    }
+
+    if (repoName) {
+      // 移除可能的不可见字符并返回
+      return repoName.replace(/[\n\r\t]/g, '').trim();
+    }
+
+    // fallback 到页面标题
     const title = document.title.replace(' - DeepWiki', '').replace('Search | ', '').trim();
     return title || 'DeepWiki Session';
   }
