@@ -13,7 +13,8 @@
     "https://chat.deepseek.com/*",
     "https://chat.openai.com/*",
     "https://chatgpt.com/*",
-    "http://127.0.0.1:8766/*"
+    "http://127.0.0.1:8766/*",
+    "https://deepwiki.com/search/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -27,6 +28,11 @@
     {
       "matches": ["https://chat.openai.com/*", "https://chatgpt.com/*"],
       "js": ["content-scripts/chatgpt.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://deepwiki.com/search/*"],
+      "js": ["content-scripts/deepwiki.js"],
       "run_at": "document_idle"
     }
   ],
