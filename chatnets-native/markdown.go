@@ -15,9 +15,9 @@ func formatMessage(data *Data, messageIndex int) string {
 		// Extract first line of text for the outline heading
 		titleLine := extractTitleFromContent(data.Content, 40)
 		content := escapeMarkdown(data.Content)
-		
+
 		// Render User message as a heading so it appears in Obsidian Outline
-		return fmt.Sprintf("### 🙋‍♂️ [%s] %s ^message-%d\n\n%s", timestamp, titleLine, messageIndex, content)
+		return fmt.Sprintf("### [%s] %s ^message-%d\n\n%s", timestamp, titleLine, messageIndex, content)
 	}
 
 	// For Assistant or other roles:
@@ -25,7 +25,7 @@ func formatMessage(data *Data, messageIndex int) string {
 	content := escapeMarkdown(data.Content)
 	// Downgrade headings inside Assistant messages to bold text
 	content = downgradeHeadings(content)
-	
+
 	return fmt.Sprintf("**[%s] %s** ^message-%d\n\n%s", timestamp, role, messageIndex, content)
 }
 
@@ -35,9 +35,9 @@ func extractTitleFromContent(content string, maxLength int) string {
 	if len(lines) == 0 {
 		return "User Message"
 	}
-	
+
 	firstLine := strings.TrimSpace(lines[0])
-	
+
 	// Convert to runes for utf8-aware length checking
 	runes := []rune(firstLine)
 	if len(runes) > maxLength {

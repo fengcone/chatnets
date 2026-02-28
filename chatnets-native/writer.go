@@ -120,7 +120,7 @@ func (w *Writer) getOrCreateFilePath(dir string, data *Data) string {
 			// Update session title in metadata if it has changed
 			w.mu.Lock()
 			if meta, ok := w.sessionMeta[data.SessionID]; ok && meta.Title != data.Title {
-				log.Printf("[Chatnets] Session title changed for %s: %s -> %s", 
+				log.Printf("[Chatnets] Session title changed for %s: %s -> %s",
 					data.SessionID, meta.Title, data.Title)
 				meta.Title = data.Title
 			}
@@ -144,7 +144,7 @@ func (w *Writer) getOrCreateFilePath(dir string, data *Data) string {
 			// File doesn't exist, we can use this path
 			break
 		}
-		
+
 		// File exists - check if it belongs to a different session
 		existingSessionID := w.getSessionIDFromFile(filePath)
 		if existingSessionID == data.SessionID {
@@ -155,7 +155,7 @@ func (w *Writer) getOrCreateFilePath(dir string, data *Data) string {
 			w.mu.Unlock()
 			return filePath
 		}
-		
+
 		// Different session with same title - add counter suffix
 		base := sanitizeFilename(data.Title)
 		filename = fmt.Sprintf("%s_%d.md", base, counter)
@@ -267,7 +267,7 @@ func (w *Writer) messageExists(filePath string, data *Data) bool {
 	// Escape special regex characters in content
 	contentEscaped := regexp.QuoteMeta(data.Content)
 	// Pattern should match the new format and the old format
-	// New User: ### 🙋‍♂️ [HH:MM:SS] Title... ^message-N
+	// New User: ### [HH:MM:SS] Title... ^message-N
 	// New Assistant: **[HH:MM:SS] Role** ^message-N
 	// Old: **[HH:MM:SS] Role** ^message-N or ## [HH:MM:SS] Role ^message-N
 

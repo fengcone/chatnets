@@ -112,14 +112,15 @@ wc -l 对话.md
 # 从上次处理的行号之后，提取用户消息
 # 关键优化：只读用户消息，不读 AI 长篇回复，节省 80%+ token
 
-awk 'NR>680' 对话.md | grep -A5 '## \[[0-9:]+\] User \^message-'
+awk 'NR>680' 对话.md | grep -A5 '^### \[[0-9:]+\]'
 ```
 
 ### 计算结束行号
 
 ```bash
 # 获取第 N 条消息的结束行号（下一条消息的起始行 - 1）
-grep -n '^## \[[0-9:]\+' 对话.md | awk -F: 'NR==26 {print $1-1}'
+# 只匹配带 ^message- 锚点的消息行，忽略助手消息内的降级标题
+grep -nE '\^message-[0-9]+' 对话.md | awk -F: 'NR==26 {print $1-1}'
 # 输出：680（第 26 条在 681 行，所以第 25 条结束于 680）
 ```
 
@@ -127,7 +128,7 @@ grep -n '^## \[[0-9:]\+' 对话.md | awk -F: 'NR==26 {print $1-1}'
 
 ```bash
 # 获取最后一条消息的锚点号
-grep '## \[[0-9:]\+' 对话.md | tail -1 | grep -oE '\^message-[0-9]+' | grep -oE '[0-9]+'
+grep -E '\^message-[0-9]+' 对话.md | tail -1 | grep -oE '\^message-[0-9]+' | grep -oE '[0-9]+'
 ```
 
 ---
@@ -155,7 +156,8 @@ AI: [详细解释...]
 **第一步：提取用户消息**
 
 ```bash
-grep -A5 '## \[[0-9:]+\] User \^message-' 对话.md
+# 用户消息格式：### [HH:MM:SS] 标题... ^message-N
+grep -A5 '^### \[[0-9:]+\]' 对话.md
 ```
 
 **第二步：AI 判断哪些是费曼回复**
@@ -314,23 +316,25 @@ AI 回答: [AI 的详细解释...]
 ```markdown
 # 对话标题
 
-## [08:31:38] User ^message-1
+### [08:31:38] 用户提问的标题... ^message-1
 
-用户问的问题...
+用户问的完整问题内容...
 
-## [08:31:38] Assistant ^message-2
+**[08:31:38] Assistant** ^message-2
 
 AI 的回答...
 
-## [08:31:39] User ^message-3
+### [08:31:39] 我的理解是... ^message-3
 
-我理解一下，所以...
+用户复述理解的完整内容...
 
 <!-- chatnets-meta: {"session_id":"xxx","message_count":3,"last_updated":"2026-02-21T12:35:24Z"} -->
 ```
 
 **格式说明**：
-- `^message-N` 是 Obsidian 块锚点，位于标题末尾（符合 Obsidian 规范）
+- `### [时间] 标题 ^message-N` - 用户消息（三级标题，标题为用户提问首行摘要）
+- `**[时间] Assistant** ^message-N` - 助手消息（粗体文本，非标题，保持大纲整洁）
+- `^message-N` 是 Obsidian 块锚点，位于行末（符合 Obsidian 规范）
 - 链接格式：`[[对话名#^message-N]]` 可精确跳转到对应消息
 - `chatnets-meta` 包含 session_id 和消息统计， session_id 需要用于下述相关文档
 
