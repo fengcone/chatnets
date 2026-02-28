@@ -12,7 +12,7 @@ Chatnets 只提取用户主动确认理解的知识点，确保每个概念都�
 
 ## 特性
 
-- **多平台采集** - 支持 DeepSeek 和 ChatGPT
+- **多平台采集** - 支持 DeepSeek、ChatGPT、DeepWiki
 - **实时同步** - 浏览器扩展自动保存对话为 Markdown
 - **费曼模式识别** - 智能识别"提问→回答→复述"的学习三元组
 - **原子笔记** - 每个概念一个文件，支持双向链接
@@ -66,15 +66,15 @@ ln -s /path/to/chatnets/chatnets-obsidian ~/.claude/skills/chatnets-obsidian
 ### 原始对话
 
 ```markdown
-## [10:30:15] User ^message-1
+### [10:30:15] runc 和 containerd 的关系是什么？ ^message-1
 
 runc 和 containerd 的关系是什么？
 
-## [10:30:16] Assistant ^message-2
+**[10:30:16] Assistant** ^message-2
 
 containerd 创建 shim 进程来管理 runc...
 
-## [10:30:20] User ^message-3
+### [10:30:20] 我的理解是... ^message-3
 
 我理解一下，所以 containerd 创建 shim 进程来管理 runc 的生命周期...
 ```
