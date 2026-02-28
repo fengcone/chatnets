@@ -13,6 +13,15 @@
   const STORAGE_KEY = 'chatnets_sent_messages_v1';
   let sentMessageIds = new Set(); // In-memory cache
 
+  // Initialize Turndown (available globally from lib/turndown.js)
+  let turndownService = null;
+  if (typeof TurndownService !== 'undefined') {
+    turndownService = new TurndownService({
+      headingStyle: 'atx',
+      codeBlockStyle: 'fenced'
+    });
+  }
+
   // Load sent message IDs from chrome.storage
   function loadSentMessageIds() {
     chrome.storage.local.get([STORAGE_KEY], (result) => {
@@ -192,7 +201,18 @@
 
         node.dataset.chatnetsSeen = '1';
 
-        const content = cleanMessageText(node.innerText || '');
+        // 先清理不需要被转换的标签（例如复制按钮等影响阅读的干扰元素）
+        const clone = node.cloneNode(true);
+        const copyBtns = clone.querySelectorAll('.ds-icon-button, .md-code-block-action');
+        copyBtns.forEach(btn => btn.remove());
+
+        let content = '';
+        if (turndownService) {
+          content = turndownService.turndown(clone.innerHTML).trim();
+        } else {
+          content = cleanMessageText(node.innerText || '');
+        }
+
         if (!content || content.length < 2) return;
 
         const messageId = makeMessageId(sessionId, 'assistant', content);

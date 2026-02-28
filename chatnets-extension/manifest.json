@@ -21,18 +21,34 @@
   },
   "content_scripts": [
     {
-      "matches": ["https://chat.deepseek.com/*"],
-      "js": ["content-script.js"],
+      "matches": [
+        "https://chat.deepseek.com/*"
+      ],
+      "js": [
+        "lib/turndown.js",
+        "content-script.js"
+      ],
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://chat.openai.com/*", "https://chatgpt.com/*"],
-      "js": ["content-scripts/chatgpt.js"],
+      "matches": [
+        "https://chat.openai.com/*",
+        "https://chatgpt.com/*"
+      ],
+      "js": [
+        "lib/turndown.js",
+        "content-scripts/chatgpt.js"
+      ],
       "run_at": "document_idle"
     },
     {
-      "matches": ["https://deepwiki.com/search/*"],
-      "js": ["content-scripts/deepwiki.js"],
+      "matches": [
+        "https://deepwiki.com/search/*"
+      ],
+      "js": [
+        "lib/turndown.js",
+        "content-scripts/deepwiki.js"
+      ],
       "run_at": "document_idle"
     }
   ],

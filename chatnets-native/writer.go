@@ -230,9 +230,14 @@ func (w *Writer) messageExists(filePath string, data *Data) bool {
 
 	// Escape special regex characters in content
 	contentEscaped := regexp.QuoteMeta(data.Content)
-	// Pattern with anchor: ^message-N [HH:MM:SS] Role
-	// Use a more specific pattern: anchor + role + content (more reliable than just timestamp)
-	pattern := fmt.Sprintf(`## \^message-[\d]+ \[[\d:]+\] %s\n\n%s`, capitalize(data.Role), contentEscaped)
+	// Pattern should match the new format and the old format
+	// New User: ### 🙋‍♂️ [HH:MM:SS] Title... ^message-N
+	// New Assistant: **[HH:MM:SS] Role** ^message-N
+	// Old: **[HH:MM:SS] Role** ^message-N or ## [HH:MM:SS] Role ^message-N
+
+	// To make this robust, we just look for the anchor ^message-\d+\n\n followed exactly by the content
+	// This avoids parsing the complex prefix entirely, since the anchor + exact content is essentially a unique signature
+	pattern := fmt.Sprintf(`\^message-[\d]+\n\n%s`, contentEscaped)
 
 	matched, _ := regexp.MatchString(pattern, contentStr)
 	return matched

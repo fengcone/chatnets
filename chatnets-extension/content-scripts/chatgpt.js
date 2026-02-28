@@ -9,6 +9,15 @@
   let scanTimeout = null;
   let isScanning = false;
 
+  // Initialize Turndown (available globally from lib/turndown.js)
+  let turndownService = null;
+  if (typeof TurndownService !== 'undefined') {
+    turndownService = new TurndownService({
+      headingStyle: 'atx',
+      codeBlockStyle: 'fenced'
+    });
+  }
+
   function isExtensionContextValid() {
     try {
       return !!chrome.runtime && !!chrome.runtime.id;
@@ -98,8 +107,20 @@
         if (role !== 'user' && role !== 'assistant') return;
 
         // Get message content
-        const contentNode = node.querySelector('[data-message-author-role]') || node;
-        const content = cleanMessageText(contentNode.innerText || '');
+        const markdownNode = node.querySelector('.markdown');
+        const contentNode = markdownNode || node.querySelector('[data-message-author-role]') || node;
+
+        let content = '';
+        if (role === 'assistant' && turndownService && markdownNode) {
+          // Clean up unwanted copy buttons etc. if they exist inside markdown node
+          const clone = markdownNode.cloneNode(true);
+          const copyBtns = clone.querySelectorAll('button');
+          copyBtns.forEach(btn => btn.remove());
+
+          content = turndownService.turndown(clone.innerHTML).trim();
+        } else {
+          content = cleanMessageText(contentNode.innerText || '');
+        }
         if (!content || content.length < 2) return;
 
         node.dataset.chatnetsSeen = '1';

@@ -42,9 +42,11 @@ func (h *Handler) handleWrite(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Set default timestamp if not provided
+	// Set default timestamp if not provided, otherwise convert to local timezone
 	if req.Timestamp.IsZero() {
-		req.Timestamp = h.now()
+		req.Timestamp = h.now().Local()
+	} else {
+		req.Timestamp = req.Timestamp.Local()
 	}
 
 	// Set default title if not provided

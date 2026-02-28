@@ -13,6 +13,15 @@
   const STORAGE_KEY = 'chatnets_dw_sent_messages_v1';
   let sentMessageIds = new Set(); // In-memory cache
 
+  // Initialize Turndown (available globally from lib/turndown.js)
+  let turndownService = null;
+  if (typeof TurndownService !== 'undefined') {
+    turndownService = new TurndownService({
+      headingStyle: 'atx',
+      codeBlockStyle: 'fenced'
+    });
+  }
+
   // Load sent message IDs from chrome.storage
   function loadSentMessageIds() {
     chrome.storage.local.get([STORAGE_KEY], (result) => {
@@ -166,7 +175,13 @@
         if (node.dataset.chatnetsSeen === '1') return;
         node.dataset.chatnetsSeen = '1';
 
-        const content = node.innerText || '';
+        let content = '';
+        if (turndownService) {
+          content = turndownService.turndown(node.innerHTML).trim();
+        } else {
+          content = node.innerText || '';
+        }
+
         if (!content || content.length < 2) return;
 
         const messageId = makeMessageId(sessionId, 'assistant', content);
