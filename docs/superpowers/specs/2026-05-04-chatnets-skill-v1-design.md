@@ -1,72 +1,72 @@
-# Chatnets Skill V1 Design
+# Chatnets Skill V1 设计
 
-Status: Draft for user review
-Date: 2026-05-04
+状态：草稿，等待用户 review
+日期：2026-05-04
 
-## Purpose
+## 目标
 
-Chatnets V1 is a Codex / Claude Code skill for learning inside an Obsidian vault.
+Chatnets V1 是一个给 Codex / Claude Code 使用的学习型 skill。
 
-The user opens the vault folder in Codex or Claude Code, starts a learning session with a topic, then chats normally. Chatnets acts as a learning companion and knowledge compiler: it detects candidate concepts, waits for Feynman-style understanding signals, and writes confirmed concepts into an Obsidian-friendly knowledge structure.
+用户在 Obsidian vault 根目录打开 Codex 或 Claude Code，然后用一个主题开启学习会话。之后用户就像平常聊天一样学习。Chatnets 一边解释、追问、纠错，一边把真正经过费曼复述确认的知识沉淀成 Obsidian 里的概念笔记。
 
-The goal is not to capture every AI conversation. The goal is to preserve the parts of a learning conversation that became stable understanding.
+这个版本不追求采集所有 AI 对话。它只保存学习过程中真正变成稳定理解的部分。
 
-## Core Idea
+## 核心思路
 
-The pipeline is:
+整体流程是：
 
 ```text
-learning conversation -> generated session source -> Feynman detection -> topic-scoped concepts -> MOC
+学习对话 -> 生成 session 来源笔记 -> 识别费曼复述 -> 沉淀主题内 concepts -> 更新 MOC
 ```
 
-Chatnets does not depend on browser capture, a Go service, Codex internal session files, or Claude Code internal logs. During the learning session, the skill writes its own source notes into the vault. Those generated session notes become the durable source references for concept files.
+Chatnets 不依赖浏览器插件、Go 服务、Codex 内部 session 文件，也不依赖 Claude Code 的内部日志。学习过程中，skill 自己在 vault 里写一份可引用的 session 笔记。这份 session 笔记就是后续 concept 文件的稳定来源。
 
-## Vault Contract
+## Vault 约定
 
-The current working directory is treated as the Obsidian vault root.
+当前工作目录就是 Obsidian vault 根目录。
 
-The vault should include a default agent instruction file, preferably `AGENTS.md`, that tells Codex / Claude Code this folder is a learning vault rather than a normal software-development workspace. If the target agent expects another filename such as `CLAUDE.md`, Chatnets may create the equivalent file with the same intent.
+这个 vault 默认应该有一个代理说明文件，优先使用 `AGENTS.md`。它的作用是告诉 Codex / Claude Code：这个文件夹是学习 vault，不是普通代码开发目录。如果某个工具更偏好 `CLAUDE.md` 之类的文件名，Chatnets 可以创建等价说明文件。
 
-Suggested `AGENTS.md` content:
+建议的 `AGENTS.md` 内容：
 
 ```markdown
 # Agent Instructions
 
-This folder is an Obsidian learning vault.
+这个文件夹是一个 Obsidian 学习 vault。
 
-When the user invokes Chatnets, prioritize learning, explanation, Feynman-style checks, and note synthesis. Do not treat this vault as an application codebase unless the user explicitly asks for software-development work.
+当用户调用 Chatnets 时，优先进行学习陪伴、概念解释、费曼复述检查和笔记沉淀。不要把这个 vault 当成普通应用代码仓库，除非用户明确要求做软件开发工作。
 
-For Chatnets learning sessions:
-- Keep raw conversation out of the final concept layer.
-- Write durable learning evidence to `sessions/`.
-- Promote only confirmed understanding into `concepts/`.
-- Keep uncertain material in `inbox/`.
-- Maintain topic MOCs in `mocs/`.
+Chatnets 学习会话约定：
+- 不把原始聊天流水账直接放进最终概念层。
+- 把可引用的学习证据写入 `sessions/`。
+- 只有确认理解后的内容才进入 `concepts/`。
+- 不确定内容先留在 `inbox/`。
+- 主题入口和学习路径维护在 `mocs/`。
 ```
 
-Chatnets should check for this file at startup. If it is missing, Chatnets should ask before creating it.
+Chatnets 启动时应该检查这个文件。如果缺失，应先询问用户，再创建。
 
-## Startup Flow
+## 启动流程
 
-The user starts a session with a command like:
+用户可以这样启动：
 
 ```text
 用 chatnets 学习 Linux 容器运行时
 ```
 
-Chatnets then:
+Chatnets 启动后：
 
-1. Confirms the current directory is the Obsidian vault root.
-2. Determines the topic directory name.
-3. If the topic is new, asks the user to confirm the large topic name.
-4. Creates or reuses the topic directories and files.
-5. Starts a dated session note.
+1. 确认当前目录是 Obsidian vault 根目录。
+2. 判断本次学习归属的大主题目录名。
+3. 如果主题不存在，询问用户确认主题名。
+4. 创建或复用主题相关目录和文件。
+5. 创建当天的 session 笔记。
 
-The large topic name is user-facing and should be human-readable, for example `Linux 容器运行时`, `Kubernetes 网络`, or `AI 沙箱平台`.
+大主题名是给人看的，应尽量自然，例如 `Linux 容器运行时`、`Kubernetes 网络`、`AI 沙箱平台`。
 
-## Directory Layout
+## 目录结构
 
-For a topic named `Linux 容器运行时`, Chatnets maintains:
+以主题 `Linux 容器运行时` 为例：
 
 ```text
 <vault>/
@@ -93,13 +93,13 @@ For a topic named `Linux 容器运行时`, Chatnets maintains:
     chatnets-state.yaml
 ```
 
-This avoids a flat global `concepts/` directory while still allowing cross-topic links.
+这样可以避免所有概念都平铺在一个 `concepts/` 目录下，同时仍然保留跨主题链接能力。
 
-## Session Source Notes
+## Session 来源笔记
 
-Session notes are not full chat transcripts. They are curated learning evidence written by Chatnets.
+Session 笔记不是完整聊天记录，而是 Chatnets 整理出来的学习证据。
 
-Each session note contains anchored blocks:
+每个 session 笔记包含带锚点的学习片段：
 
 ```markdown
 # container runtime 学习会话
@@ -119,7 +119,7 @@ containerd 负责容器生命周期管理，runc 是 OCI runtime 的底层执行
 我理解一下，所以 containerd 更像管理层，runc 是最后真正创建容器进程的执行器，shim 把它们隔开。
 ```
 
-Concept files link to these anchors:
+concept 文件引用这些锚点：
 
 ```yaml
 source_sessions:
@@ -127,17 +127,17 @@ source_sessions:
   - sessions/Linux 容器运行时/2026-05-04-container-runtime.md#^f-001
 ```
 
-This gives stable Obsidian references without relying on Codex or Claude Code private storage formats.
+这样 Obsidian 里可以稳定跳转，不需要依赖 Codex 或 Claude Code 的私有存储格式。
 
-## Feynman Detection
+## 费曼识别
 
-Chatnets promotes knowledge through three states:
+Chatnets 用三个状态推进知识沉淀：
 
-1. `candidate`: the user asked about a concept, mechanism, comparison, architecture, principle, or workflow.
-2. `needs-confirmation`: the user attempted a Feynman restatement, but Chatnets sees missing or incorrect understanding.
-3. `confirmed`: the user restated the idea accurately enough in their own words.
+1. `candidate`：用户问到了一个概念、机制、区别、架构、原则或流程。
+2. `needs-confirmation`：用户尝试复述，但理解还有缺口或错误。
+3. `confirmed`：用户已经用自己的话准确复述了核心关系。
 
-Feynman signals include phrases such as:
+费曼信号包括：
 
 ```text
 我理解一下...
@@ -149,28 +149,28 @@ Feynman signals include phrases such as:
 我现在感觉它其实是...
 ```
 
-The phrase alone is not enough. Chatnets must evaluate whether the restatement captures the core relation accurately. If not, it corrects the misunderstanding and leaves the item in `needs-confirmation`.
+只出现这些表达还不够。Chatnets 必须判断用户复述是否抓住了核心关系。如果复述不准确，Chatnets 应该先纠正，而不是把错误理解写进正式 concept。
 
-## Inbox Behavior
+## Inbox 机制
 
-Concept candidates that have not passed Feynman confirmation stay in:
+还没有通过费曼确认的候选概念，先放在：
 
 ```text
-inbox/<topic>.md
+inbox/<主题>.md
 ```
 
-The inbox groups candidates by learning thread and records:
+inbox 按学习线索整理，记录：
 
-- candidate concept names
-- current uncertainty
-- what needs to be clarified
-- links to the relevant session anchors
+- 候选概念名
+- 当前不确定点
+- 还需要澄清什么
+- 对应的 session 锚点
 
-The inbox is allowed to be messy. The concept layer should stay clean.
+inbox 可以稍微乱一点。正式 `concepts/` 层要保持干净。
 
-## Concept Document Format
+## Concept 文档格式
 
-Confirmed concepts use a two-layer note structure: accurate synthesized knowledge plus the user's own understanding evidence.
+确认后的概念采用双层结构：一层是准确整理后的知识，一层是用户自己的理解证据。
 
 ```markdown
 ---
@@ -211,64 +211,64 @@ source_sessions:
 - [[OCI runtime]]
 ```
 
-The `准确定义` and `关键理解` sections should be cleaned up by the model. The `我的理解` section should preserve the user's own wording when possible.
+`准确定义` 和 `关键理解` 由模型整理成准确笔记。`我的理解` 尽量保留用户自己的说法，这样以后回看时能看到当时理解发生的证据。
 
-## MOC Behavior
+## MOC 机制
 
-Each topic has one MOC:
+每个主题有一个 MOC：
 
 ```text
 mocs/Linux 容器运行时.md
 ```
 
-The MOC is the topic entry point. It should contain:
+MOC 是主题入口，应该包含：
 
-- core concepts
-- suggested learning path
-- related concepts across other topics
-- session links
-- unresolved questions
+- 核心概念
+- 推荐学习路径
+- 跨主题相关概念
+- 相关 session 链接
+- 未解决问题
 
-The MOC should not be a flat dump of every concept. Chatnets should keep it readable and organized.
+MOC 不应该只是概念列表 dump。Chatnets 应该让它保持可读、有层次。
 
-## Same-Name Concept Strategy
+## 同名概念策略
 
-Default behavior: concepts are scoped by topic.
+默认按主题隔离 concept。
 
-Examples:
+例如：
 
 ```text
 concepts/Linux 容器运行时/Namespace.md
 concepts/Kubernetes 基础/Namespace.md
 ```
 
-Chatnets should not auto-merge these files. If it detects high overlap with an existing concept in another topic, it should ask:
+Chatnets 不自动合并这些文件。如果发现另一个主题里已有高度相似的概念，应提醒用户：
 
 ```text
 我发现这个 Namespace 和 Kubernetes 基础里的 Namespace 高度相关。
 要保持主题内独立，还是建立一个 canonical concept 并让两个主题引用它？
 ```
 
-V1 only needs to support the prompt. A future version may add a global canonical concept layer.
+V1 只需要支持提醒和人工决策。真正的全局 canonical concept 层可以放到后续版本。
 
-## State File
+## 状态文件
 
-Chatnets stores operational state in:
+Chatnets 的运行状态写在：
 
 ```text
 meta/chatnets-state.yaml
 ```
 
-The state file tracks:
+状态文件记录：
 
-- known topics
-- current active session per topic
-- next anchor counters
-- candidate concepts
-- confirmed concepts
-- known same-name or merge suggestions
+- 已知主题
+- 每个主题当前活跃 session
+- 下一个锚点编号
+- 候选概念
+- 已确认概念
+- 同名概念或合并提醒
 
-Example:
+示例：
 
 ```yaml
 topics:
@@ -285,49 +285,49 @@ topics:
       - runc
 ```
 
-## Non-Goals For V1
+## V1 不做什么
 
-V1 should not include:
+V1 不包含：
 
-- Chrome extension capture
-- phone app capture
-- ChatGPT export import
-- background daemon
-- Go HTTP service
-- automatic parsing of Codex or Claude Code internal session logs
-- global concept canonicalization
-- graph visualization UI
+- Chrome 扩展采集
+- 手机 app 采集
+- ChatGPT export 导入
+- 后台 daemon
+- Go HTTP 服务
+- 自动解析 Codex / Claude Code 内部 session 日志
+- 全局 concept 自动合并
+- 图谱可视化 UI
 
-These may return later, but the first useful version should be a skill-first learning workflow.
+这些以后都可以回来，但第一个可用版本应该先把 skill 内学习闭环做好。
 
-## Error Handling
+## 错误处理
 
-If the current directory does not look like a vault, Chatnets should ask before creating the structure.
+如果当前目录不像 Obsidian vault，Chatnets 应先询问，再创建结构。
 
-If a topic already exists, Chatnets should reuse it.
+如果主题已经存在，复用已有主题。
 
-If a concept file already exists in the same topic, Chatnets should update it rather than create a duplicate.
+如果同主题下已有 concept 文件，更新它，不创建重复文件。
 
-If the user's Feynman restatement appears wrong, Chatnets should avoid writing a confirmed concept and instead explain the correction.
+如果用户费曼复述明显有错，不写入 confirmed concept，而是先解释纠正。
 
-If `AGENTS.md` is missing, Chatnets should ask before creating it.
+如果缺少 `AGENTS.md`，先询问用户再创建。
 
-## Validation Criteria
+## 验收标准
 
-A successful V1 should support this workflow:
+V1 成功时应支持这个流程：
 
-1. User opens an Obsidian vault in Codex or Claude Code.
-2. User says: `用 chatnets 学习 Linux 容器运行时`.
-3. Chatnets asks for or confirms the large topic directory name.
-4. User asks about a concept.
-5. Chatnets explains it and records a candidate in the topic inbox.
-6. User gives a Feynman restatement.
-7. Chatnets verifies it, creates a session source anchor, promotes the concept, and updates the topic MOC.
-8. Obsidian shows topic-scoped concepts instead of one flat global concept list.
+1. 用户在 Codex 或 Claude Code 中打开 Obsidian vault。
+2. 用户说：`用 chatnets 学习 Linux 容器运行时`。
+3. Chatnets 询问或确认大主题目录名。
+4. 用户围绕一个概念提问。
+5. Chatnets 解释，并把候选概念记入主题 inbox。
+6. 用户给出费曼复述。
+7. Chatnets 验证理解，创建 session 来源锚点，提升 concept，更新主题 MOC。
+8. Obsidian 里看到的是按主题组织的概念，而不是一个全局平铺列表。
 
-## Open Questions
+## 待定问题
 
-1. Should Chatnets create `AGENTS.md` automatically on first run, or always ask first?
-2. Should session notes include only successful Feynman triples, or also corrected failed attempts?
-3. Should cross-topic merge suggestions live in `meta/chatnets-state.yaml`, a visible `inbox/merge-suggestions.md`, or both?
-4. Should the skill support a command to close a learning session and generate a final review note?
+1. 第一次运行时，Chatnets 是否自动创建 `AGENTS.md`，还是总是先询问？
+2. session 笔记是否只记录成功的费曼三元组，还是也记录纠错后的失败尝试？
+3. 跨主题合并提醒放在 `meta/chatnets-state.yaml`、可见的 `inbox/merge-suggestions.md`，还是两边都放？
+4. 是否需要一个“结束学习会话”的命令，用来生成最后的复盘笔记？
