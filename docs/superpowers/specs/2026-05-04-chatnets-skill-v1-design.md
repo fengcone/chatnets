@@ -89,8 +89,7 @@ Chatnets 启动后：
   mocs/
     Linux 容器运行时.md
 
-  meta/
-    chatnets-state.yaml
+  .chatnets-state.yaml
 ```
 
 这样可以避免所有概念都平铺在一个 `concepts/` 目录下，同时仍然保留跨主题链接能力。
@@ -256,8 +255,10 @@ V1 只需要支持提醒和人工决策。真正的全局 canonical concept 层�
 Chatnets 的运行状态写在：
 
 ```text
-meta/chatnets-state.yaml
+.chatnets-state.yaml
 ```
+
+V1 只有一个状态文件，不需要额外创建 `meta/` 目录。使用 vault 根目录下的隐藏文件可以减少 Obsidian 侧边栏干扰。以后如果状态拆成多文件，再考虑引入 `.chatnets/` 或 `meta/` 目录。
 
 状态文件不记录“模型觉得自己理解了什么”这种主观内容。它只记录机械状态、文件索引、锚点编号和可恢复的写入依据。语义判断仍然由模型完成，但落盘、编号、去重、链接校验应尽量由脚本保证。
 
@@ -310,12 +311,12 @@ Chatnets 是 skill，但 V1 仍然应该带少量脚本，把容易出错的机�
 
 应该由脚本稳定完成的事情：
 
-- 初始化目录：创建 `sessions/`、`concepts/`、`inbox/`、`mocs/`、`meta/`。
+- 初始化目录：创建 `sessions/`、`concepts/`、`inbox/`、`mocs/`。
 - 创建 `AGENTS.md`：只在用户确认后写入。
 - 生成文件名：把主题名、session 名、concept 名转换成稳定路径，避免重复文件。
 - 分配锚点：维护 `^q-001`、`^a-001`、`^f-001` 这类编号，避免重复。
 - 追加 session 片段：按固定模板写入提问、解释摘要、失败复述、成功复述。
-- 读写 `chatnets-state.yaml`：原子写入、schema 校验、避免手写 YAML 出错。
+- 读写 `.chatnets-state.yaml`：原子写入、schema 校验、避免手写 YAML 出错。
 - 更新 inbox：按固定格式新增或更新候选概念。
 - 更新 concept：根据模型给出的结构化草稿写入或合并文档，避免覆盖用户已有内容。
 - 更新 MOC：插入概念链接、学习路径和未解决问题，避免重复条目。
@@ -397,7 +398,7 @@ V1 成功时应支持这个流程：
 
 ## 待定问题
 
-1. 跨主题合并提醒放在 `meta/chatnets-state.yaml`、可见的 `inbox/merge-suggestions.md`，还是两边都放？
+1. 跨主题合并提醒放在 `.chatnets-state.yaml`、可见的 `inbox/merge-suggestions.md`，还是两边都放？
 
 ## 已确认决策
 
