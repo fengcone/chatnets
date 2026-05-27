@@ -292,5 +292,21 @@
 
   startHeartbeat();
 
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.type === 'GET_SESSION_INFO') {
+      const sessionId = getSessionId();
+      const title = getSessionTitle();
+      const messageCount = document.querySelectorAll('[data-message-author-role="user"], [data-message-author-role="assistant"]').length;
+
+      sendResponse({
+        id: sessionId,
+        title: title,
+        messageCount: messageCount,
+        platform: PLATFORM,
+        url: window.location.href
+      });
+    }
+  });
+
   console.log('[Chatnets] Content script loaded on ChatGPT');
 })();

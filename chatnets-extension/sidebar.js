@@ -1,203 +1,226 @@
-// Chatnets Sidebar - Session Management UI
-// Shows current session and pending sessions with manual trigger buttons
+// Chatnets Sidebar
+// Reflects the currently supported 8766 backend and active conversation state.
 
-const SERVER_URL = 'http://localhost:8765/api/v1';
+const SUPPORTED_HOSTS = ['chat.deepseek.com', 'chat.openai.com', 'chatgpt.com', 'deepwiki.com'];
 
 const state = {
   currentSession: null,
-  pendingSessions: [],
-  processing: new Set()
+  serverAvailable: false,
+  serverConfig: null,
+  stats: null,
+  activeTabUrl: '',
+  supportedPage: false,
+  loading: true
 };
 
-/**
- * Check if the server is reachable
- */
-async function checkConnection() {
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function formatPlatform(platform) {
+  if (!platform) return '未知平台';
+
+  const labels = {
+    deepseek: 'DeepSeek',
+    chatgpt: 'ChatGPT',
+    deepwiki: 'DeepWiki'
+  };
+
+  return labels[platform] || platform.charAt(0).toUpperCase() + platform.slice(1);
+}
+
+function formatPlatforms(platforms) {
+  if (!platforms) return '无';
+
+  return Object.entries(platforms)
+    .filter(([, config]) => config && config.enabled)
+    .map(([name]) => formatPlatform(name))
+    .join(' / ') || '无';
+}
+
+function isSupportedUrl(url) {
+  if (!url) return false;
+
   try {
-    const res = await fetch('http://localhost:8765/');
-    return res.ok;
+    const parsed = new URL(url);
+    return SUPPORTED_HOSTS.includes(parsed.hostname);
   } catch {
     return false;
   }
 }
 
-/**
- * Get current session info from the active tab
- */
+async function getStats() {
+  const stats = await chrome.runtime.sendMessage({ type: 'GET_STATS' });
+  state.stats = stats;
+  state.serverAvailable = !!stats.serverAvailable;
+  state.serverConfig = stats.serverConfig || null;
+}
+
+async function pingServer() {
+  const response = await chrome.runtime.sendMessage({ type: 'PING_SERVER' });
+  state.serverAvailable = !!(response && response.available);
+
+  if (!state.serverAvailable) {
+    state.serverConfig = null;
+  } else if (!state.serverConfig) {
+    await getStats();
+  }
+}
+
+async function reconnectServer() {
+  await chrome.runtime.sendMessage({ type: 'INIT_SERVER' });
+  await refreshState();
+}
+
 async function getCurrentSession() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-  if (!tab.url || !tab.url.includes('deepseek.com')) return null;
+  state.activeTabUrl = tab?.url || '';
+  state.supportedPage = isSupportedUrl(state.activeTabUrl);
+
+  if (!tab?.id || !state.supportedPage) {
+    state.currentSession = null;
+    return;
+  }
 
   try {
-    return await chrome.tabs.sendMessage(tab.id, { type: 'GET_SESSION_INFO' });
+    state.currentSession = await chrome.tabs.sendMessage(tab.id, { type: 'GET_SESSION_INFO' });
   } catch {
-    return null;
+    state.currentSession = null;
   }
 }
 
-/**
- * Fetch pending sessions from the server
- */
-async function fetchPendingSessions() {
-  try {
-    const res = await fetch(`${SERVER_URL}/ingest/sessions/pending`);
-    if (!res.ok) return [];
-    const data = await res.json();
-    return data.sessions || [];
-  } catch (err) {
-    return [];
-  }
+function renderServerSection() {
+  const statusText = state.serverAvailable ? '已连接 127.0.0.1:8766' : '未连接 127.0.0.1:8766';
+  const saveDirectory = state.serverConfig?.save_directory
+    ? `<div class="path">${escapeHtml(state.serverConfig.save_directory)}</div>`
+    : '';
+
+  return `
+    <div class="section">
+      <div class="section-title">本地服务</div>
+      <div class="card">
+        <div class="title">${statusText}</div>
+        <div class="meta">当前扩展会把消息同步到 Go 本地服务；服务不可用时只保存在浏览器本地。</div>
+        ${saveDirectory}
+        <div class="hint">启用平台: ${escapeHtml(formatPlatforms(state.serverConfig?.platforms))}</div>
+      </div>
+    </div>
+  `;
 }
 
-/**
- * Process a session - send pending messages to AI pipeline
- */
-async function processSession(sessionId) {
-  if (state.processing.has(sessionId)) return;
+function renderStatsSection() {
+  const sessionCount = state.stats?.sessionCount ?? '-';
+  const messageCount = state.stats?.messageCount ?? '-';
 
-  state.processing.add(sessionId);
-  render();
-
-  try {
-    // Get all pending messages
-    const pendingRes = await fetch(`${SERVER_URL}/ingest/pending?limit=200`);
-    const pendingData = await pendingRes.json();
-
-    // Filter messages for this session
-    const sessionMessages = pendingData.messages.filter(m => m.session_id === sessionId);
-
-    if (sessionMessages.length === 0) {
-      alert('该会话没有待处理的消息');
-      state.processing.delete(sessionId);
-      render();
-      return;
-    }
-
-    const messageIds = sessionMessages.map(m => m.id);
-
-    // Process messages
-    const res = await fetch(`${SERVER_URL}/ingest/process`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message_ids: messageIds })
-    });
-
-    const result = await res.json();
-
-    // Clear processing state after a delay
-    setTimeout(() => {
-      state.processing.delete(sessionId);
-      render();
-    }, 3000);
-
-    // Reload pending sessions
-    loadPendingSessions();
-  } catch (err) {
-    console.error('Process session error:', err);
-    state.processing.delete(sessionId);
-    render();
-  }
+  return `
+    <div class="section">
+      <div class="section-title">本地缓存</div>
+      <div class="grid">
+        <div class="stat">
+          <span class="stat-label">会话数</span>
+          <span class="stat-value">${escapeHtml(sessionCount)}</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">消息数</span>
+          <span class="stat-value">${escapeHtml(messageCount)}</span>
+        </div>
+      </div>
+    </div>
+  `;
 }
 
-/**
- * Format timestamp to relative time
- */
-function formatTime(isoString) {
-  if (!isoString) return '';
-  const date = new Date(isoString);
-  const now = new Date();
-  const diff = now - date;
-
-  if (diff < 60000) return '刚刚';
-  if (diff < 3600000) return Math.floor(diff / 60000) + '分钟前';
-  if (diff < 86400000) return Math.floor(diff / 3600000) + '小时前';
-  return date.toLocaleDateString();
-}
-
-/**
- * Render the sidebar UI
- */
-async function render() {
-  const statusDot = document.getElementById('statusDot');
-  const content = document.getElementById('content');
-
-  const connected = await checkConnection();
-  statusDot.classList.toggle('disconnected', !connected);
-
-  let html = '';
-
-  // Current session section
+function renderSessionSection() {
   if (state.currentSession) {
-    const isProcessing = state.processing.has(state.currentSession.id);
-    html += `
+    return `
       <div class="section">
         <div class="section-title">当前会话</div>
-        <div class="session-card">
-          <div class="session-title">${state.currentSession.title || 'DeepSeek Chat'}</div>
-          <div class="session-meta">${state.currentSession.messageCount || 0} 条消息 • 刚刚</div>
-          ${isProcessing
-            ? '<button class="btn btn-primary" disabled><div class="loading-spinner"></div> 整理中...</button>'
-            : '<button class="btn btn-primary" onclick="window.processSession(\'' + state.currentSession.id + '\')">整理到图谱</button>'
-          }
+        <div class="card">
+          <div class="title">${escapeHtml(state.currentSession.title || 'Untitled Session')}</div>
+          <div class="meta">${escapeHtml(formatPlatform(state.currentSession.platform))} · ${escapeHtml(state.currentSession.messageCount || 0)} 条消息</div>
+          <div class="hint">Session ID: ${escapeHtml(state.currentSession.id || '')}</div>
         </div>
       </div>
     `;
   }
 
-  // Pending sessions section
-  if (state.pendingSessions.length > 0) {
-    html += '<div class="section"><div class="section-title">历史会话 (未整理)</div>';
-    state.pendingSessions.slice(0, 5).forEach(session => {
-      const isProcessing = state.processing.has(session.id);
-      html += `
-        <div class="session-card">
-          <div class="session-title">${session.title || 'Session'}</div>
-          <div class="session-meta">${session.messageCount || 0} 条 • ${formatTime(session.updatedAt)}</div>
-          ${isProcessing
-            ? '<button class="btn btn-secondary" disabled><div class="loading-spinner"></div> 整理中...</button>'
-            : '<button class="btn btn-secondary" onclick="window.processSession(\'' + session.id + '\')">整理到图谱</button>'
-          }
+  if (state.supportedPage) {
+    return `
+      <div class="section">
+        <div class="section-title">当前会话</div>
+        <div class="card">
+          <div class="title">页面已识别</div>
+          <div class="meta">当前标签页属于受支持平台，但还没有读取到会话内容。通常刷新页面或等待内容脚本完成初始化即可。</div>
         </div>
-      `;
-    });
-    html += '</div>';
-  } else if (!state.currentSession) {
-    html += '<div class="empty-state">暂无待处理会话<br><br>在 DeepSeek 聊天后，这里会显示待整理的内容</div>';
+      </div>
+    `;
   }
 
-  content.innerHTML = html;
+  return `
+    <div class="section">
+      <div class="section-title">当前会话</div>
+      <div class="empty-state">当前标签页不是受支持的聊天页面。<br>支持 DeepSeek、ChatGPT 和 DeepWiki。</div>
+    </div>
+  `;
 }
 
-/**
- * Load pending sessions from server
- */
-async function loadPendingSessions() {
-  state.pendingSessions = await fetchPendingSessions();
+function renderActions() {
+  return `
+    <div class="section">
+      <div class="actions">
+        <button class="btn btn-primary" id="refresh-btn">刷新状态</button>
+        <button class="btn btn-secondary" id="reconnect-btn">重新连接</button>
+      </div>
+    </div>
+  `;
+}
+
+function render() {
+  const statusDot = document.getElementById('statusDot');
+  const content = document.getElementById('content');
+
+  statusDot.classList.toggle('disconnected', !state.serverAvailable);
+  statusDot.classList.toggle('checking', state.loading);
+
+  if (state.loading) {
+    content.innerHTML = '<div class="empty-state">正在同步扩展状态...</div>';
+    return;
+  }
+
+  content.innerHTML = [
+    renderServerSection(),
+    renderStatsSection(),
+    renderSessionSection(),
+    renderActions()
+  ].join('');
+
+  document.getElementById('refresh-btn').addEventListener('click', refreshState);
+  document.getElementById('reconnect-btn').addEventListener('click', reconnectServer);
+}
+
+async function refreshState() {
+  state.loading = true;
   render();
+
+  try {
+    await pingServer();
+    await getStats();
+    await getCurrentSession();
+  } catch (error) {
+    console.error('[Chatnets] Sidebar refresh failed:', error);
+  } finally {
+    state.loading = false;
+    render();
+  }
 }
 
-/**
- * Initialize the sidebar
- */
 async function init() {
-  // Show initial state
-  render();
-
-  // Load current session
-  state.currentSession = await getCurrentSession();
-
-  // Load pending sessions
-  await loadPendingSessions();
-
-  // Refresh every 10 seconds
-  setInterval(async () => {
-    state.currentSession = await getCurrentSession();
-    await loadPendingSessions();
-  }, 10000);
+  await refreshState();
+  setInterval(refreshState, 10000);
 }
 
-// Expose processSession to global scope for onclick handlers
-window.processSession = processSession;
-
-// Start
 init();
