@@ -131,6 +131,7 @@ Session/
 
 - 在 Codex Desktop 中，优先读取环境变量 `CODEX_THREAD_ID`，自动生成 `codex://threads/<CODEX_THREAD_ID>`。
 - 如果用户手动提供 `codex://...` deeplink，使用用户提供的链接。
+- 如果是在 Codex 旁路聊天中唤起 Chatnets，优先让用户提供原学习会话的 deeplink 或 thread id；不要默认把旁路聊天的 `CODEX_THREAD_ID` 当作原学习会话。
 - 如果既没有 `CODEX_THREAD_ID`，也没有用户提供的 deeplink，就省略 `**原始对话：**`，不要阻塞落盘。
 - 原始对话链接只写入 `Session/`，不要写入 `Concepts/` 或 `Mocs/`，避免污染知识图谱。
 - 原始对话链接只是回到 Codex 原文的快捷入口，不替代 Session 摘要，也不当作长期归档。
@@ -216,7 +217,7 @@ containerd 是一个负责管理容器生命周期的容器运行时守护进程
 
 ## 学习来源
 
-- [[Linux#2026-05-08 containerd 和 runc 的关系]]
+- [[Session/Linux#2026-05-08 containerd 和 runc 的关系|Linux · 2026-05-08 containerd 和 runc 的关系]]
 ```
 
 概念图规则：
@@ -236,6 +237,13 @@ containerd 是一个负责管理容器生命周期的容器运行时守护进程
 - 需要表现的核心关系
 - 不要表现的错误类比、误解或不确定关系
 - 视觉要求：横版图、适合放在 Obsidian 概念笔记顶部、干净、技术感、浅色背景、少文字、用图形和箭头表达边界与关系
+
+Concept 学习来源链接规则：
+
+- `Mocs/<大类>.md` 和 `Session/<大类>.md` 允许同名，但 Concept 的 `## 学习来源` 必须明确指向 `Session/` 目录。
+- 学习来源统一写成 `[[Session/<大类>#<Session 三级标题>|<大类> · <Session 三级标题>]]`。
+- 不要写裸链接，例如 `[[Linux#...]]`、`[[E2B#...]]`、`[[Kubernetes#...]]`；这类链接在存在同名 MOC 时容易跳错。
+- `Concepts` 和 `Mocs` 中的知识链接仍然使用概念名链接，例如 `[[containerd]]`、`[[userfaultfd]]`。
 
 ## Mocs 规则
 
@@ -309,10 +317,11 @@ MOC 示例：
 6. 概念图是否只表达已确认的核心关系，没有替代正文？
 7. MOC 双向链接是否只指向已存在或本次将创建的概念？
 8. 未创建概念是否放在 MOC 的“待增加”区，并保持纯文本？
-9. Session 是否尽量保留用户原话，AI 回复是否只摘要？
-10. 如果存在 `CODEX_THREAD_ID` 或用户提供了 deeplink，Session 是否写入 `**原始对话：**`？
-11. 如有 Assets，是否使用正确链接引用？
-12. 用户是否已经确认落盘？
+9. Concept 的 `## 学习来源` 是否使用 `[[Session/<大类>#标题|...]]`，没有使用裸的 `[[<大类>#...]]`？
+10. Session 是否尽量保留用户原话，AI 回复是否只摘要？
+11. 如果存在 `CODEX_THREAD_ID` 或用户提供了 deeplink，Session 是否写入 `**原始对话：**`？
+12. 如有 Assets，是否使用正确链接引用？
+13. 用户是否已经确认落盘？
 
 ## 落盘后检查清单
 
@@ -322,6 +331,7 @@ MOC 示例：
 2. `Concepts/` 中新增或更新了原子概念。
 3. 新增或大幅更新的 Concept 已有概念图；如果当前环境不能生成图片，已在本次回复或草案说明待补图，且 Concept 文档没有保留生成提示词。
 4. `Session/` 中的原始对话链接能回跳到 Codex 原文，且没有写入 `Concepts/` 或 `Mocs/`。
-5. `Mocs/<大类>.md` 已更新学习路径和概念关联。
-6. Obsidian 双向链接都指向已存在或本次创建的概念。
-7. 如果 `~/Chatnets` 是 git 仓库，已提交一次清晰的 commit。
+5. Concept 的学习来源链接都显式指向 `Session/` 目录。
+6. `Mocs/<大类>.md` 已更新学习路径和概念关联。
+7. Obsidian 双向链接都指向已存在或本次创建的概念。
+8. 如果 `~/Chatnets` 是 git 仓库，已提交一次清晰的 commit。

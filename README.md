@@ -1,135 +1,93 @@
 # Chatnets
 
-> 将 AI 对话转化为 Obsidian Zettelkasten 知识库
+> 在 Codex 或 Claude Code 中把学习对话沉淀成 Obsidian 知识库
 
-Chatnets 是一个开源工具，采集 AI 对话记录（DeepSeek、ChatGPT），通过识别费曼学习模式，自动转化为结构化的 Obsidian 知识库。
+Chatnets 是一个全局学习写作协议（以 Skill 的形式提供）。你在 Codex 或 Claude Code 中自然地学习、追问、用自己的话复述；当你觉得这段对话值得记下来，就唤起 Chatnets。它读取当前可见对话和 `~/Chatnets` 中已有笔记，给出一份落盘草案，你确认后再写入 Obsidian vault。
 
 ## 核心理念
 
-**费曼学习法** = 提问 → 回答 → 复述理解
+费曼复述是 Chatnets 判断学习是否真正发生的核心信号。只有你用自己的话讲清楚的内容，才会变成稳定的概念笔记；失败的复述也会保留在 Session 中，记录纠偏过程。
 
-Chatnets 只提取用户主动确认理解的知识点，确保每个概念都是真正"学会"的内容。
+## Vault 结构
 
-## 特性
+固定的全局 vault 是 `~/Chatnets`：
 
-- **多平台采集** - 支持 DeepSeek、ChatGPT、DeepWiki
-- **实时同步** - 浏览器扩展自动保存对话为 Markdown
-- **费曼模式识别** - 智能识别"提问→回答→复述"的学习三元组
-- **原子笔记** - 每个概念一个文件，支持双向链接
-- **MOC 地图** - 自动构建知识导航
-
-## 架构
-
-```
-┌─────────────┐      ┌──────────────┐      ┌──────────────┐
-│ Chrome 扩展  │ ──▶  │ 本地服务      │ ──▶  │ Claude Skill │
-│ 采集对话     │      │ 保存 Markdown │      │ 构建知识库     │
-└─────────────┘      └──────────────┘      └──────────────┘
+```text
+~/Chatnets/
+  Assets/      # 图片、PDF、截图、网页资料;概念图放 Assets/Concepts/
+  Session/     # 学习记忆索引,按大类平铺,文件内按月份追加
+  Concepts/    # 原子概念,一个概念一个文件
+  Mocs/        # 大类知识地图,记录学习路径和关联问题
 ```
 
-## 快速开始
+四类文件的分工：
 
-### 1. 安装 Chrome 扩展
+- **Session**：可回忆的学习片段，保留你的原始提问和费曼复述，AI 回复只摘要。
+- **Concepts**：原子概念（单一、通用、独立），默认配一张概念图作为视觉锚点。
+- **Mocs**：大类地图，组织学习路径、关联问题和待学清单。
+- **Assets**：参考材料和概念图。
+
+## 怎么用
+
+### 安装
+
+把 `SKILL.md` 链接到你的 Skill 目录：
 
 ```bash
-git clone https://github.com/fengcone/chatnets.git
+# Claude Code
+mkdir -p ~/.claude/skills/chatnets
+ln -s "$(pwd)/SKILL.md" ~/.claude/skills/chatnets/SKILL.md
+
+# Codex 按对应的 Skill 配置方式接入
 ```
 
-在 Chrome 打开 `chrome://extensions/`，开启"开发者模式"，加载 `chatnets-extension` 目录。
+首次写入时，如果 `~/Chatnets` 还不是 git 仓库，Chatnets 会问你是否启用 git 版本管理。
 
-### 2. 运行本地服务
+### 唤起
 
-```bash
-cd chatnets-native
-make build
-./chatnets-native
-```
+先正常聊天学习，然后用任意一种方式唤起：
 
-### 3. 使用 Claude Code Skill
+- “用 Chatnets 总结一下”
+- “沉淀到 Chatnets”
+- “整理进 Obsidian”
+- 直接在费曼复述后说“这段用 Chatnets 记一下”
 
-```bash
-ln -s /path/to/chatnets/chatnets-obsidian ~/.claude/skills/chatnets-obsidian
-```
+Chatnets 会：
 
-在 Claude Code 中输入：
+1. 推断这次学习属于哪个大类（如 `Linux`、`Kubernetes`）。
+2. 读取对应的 `Mocs/<大类>.md`、`Session/<大类>.md` 和相关 `Concepts/`。
+3. 输出一份落盘草案，列出准备更新的 Session、Concepts、Mocs、Assets。
+4. 等你确认（全部、部分、或要求修改）。
+5. 写入文件，必要时生成概念图，最后提交一次 git commit。
 
-```
-/chatnets-obsidian
-```
-
-### 4. 用 Obsidian 打开 Vault
-
-配置 `~/.chatnets/config.yaml` 中的 `obsidian_vault` 路径，在 Obsidian 中打开该目录。
-
-## 输出示例
-
-### 原始对话
+### 落盘草案示例
 
 ```markdown
-### [10:30:15] runc 和 containerd 的关系是什么？ ^message-1
+## Chatnets 落盘草案
 
-runc 和 containerd 的关系是什么？
+### Session
+- 更新 Session/Linux.md 的 2026-05 小节,记录 containerd/runc 这次学习
 
-**[10:30:16] Assistant** ^message-2
+### Concepts
+- 新建 Concepts/containerd.md
+- 新建 Concepts/runc.md
+- 更新 Concepts/shim.md
 
-containerd 创建 shim 进程来管理 runc...
+### Mocs
+- 更新 Mocs/Linux.md:加入 [[containerd]]、[[runc]]、[[shim]] 的学习路径
 
-### [10:30:20] 我的理解是... ^message-3
-
-我理解一下，所以 containerd 创建 shim 进程来管理 runc 的生命周期...
+### Assets
+- 生成 Assets/Concepts/containerd.png
 ```
 
-### 生成的概念笔记
+## 设计要点
 
-```markdown
----
-type: concept
-tags: [kubernetes, container]
-source_session: "xxx"
----
+- **原子概念**：`Concepts/` 只放单一、通用、独立的概念（如 `containerd`、`cgroup`、`Pod`）。组合短语、设计原则、对比类内容不进入 Concepts，而是写进相关概念内部章节或 MOC 的学习路径。
+- **概念图**：每个新增概念默认配一张概念图（`Assets/Concepts/<概念名>.png`），表达核心心智模型，不替代正文定义。生成图片的提示词不写入 Concept 文档。
+- **整理时机**：新概念默认写入 `Concepts/` 根目录；只在你明确要求整理时才移动到 `Concepts/<目录>/`，同步更新所有相关链接。
+- **回跳链接**：在 Codex Desktop 中自动读取 `CODEX_THREAD_ID` 生成 `codex://threads/<id>`，只写入 Session，不污染 Concepts 和 Mocs。
+- **源码学习**：涉及 GitHub 源码时统一使用 `~/WorkSpaceG` 作为本地仓库目录，Obsidian 只记录理解和引用位置，不保存源码全文。
 
-# containerd
+## 详细规则
 
-## 定义
-
-containerd 是一个容器运行时，通过 shim 进程管理 runc...
-
-## 学习来源
-
-- [[容器架构#^message-2]]: AI 解释
-- [[容器架构#^message-3]]: 我的理解
-
-## 相关概念
-
-- [[runc]]
-- [[shim]]
-```
-
-## 配置
-
-`~/.chatnets/config.yaml`:
-
-```yaml
-save_directory: "~/Chatnets/chatnets-vault/chats"
-obsidian_vault: "~/Chatnets/chatnets-vault"
-
-platforms:
-  deepseek:
-    enabled: true
-  chatgpt:
-    enabled: true
-
-http_port: 8766
-```
-
-## 组件
-
-| 组件 | 功能 | 技术 |
-|------|------|------|
-| Chrome 扩展 | 监听页面、提取对话 | JavaScript, MutationObserver |
-| 本地服务 | 保存 Markdown 文件 | Go, HTTP API |
-| Claude Skill | 构建知识库 | Claude Code, YAML |
-
-## 许可证
-
-[MIT](LICENSE)
+完整的协议细节看 [SKILL.md](SKILL.md)：Vault 结构、唤起方式、大类推断、落盘流程、Session/Concepts/Mocs/Assets 各自的规则、费曼模式识别、概念图生成、落盘前后检查清单。
