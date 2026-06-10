@@ -1,13 +1,13 @@
 ---
 name: chatnets
-description: Use when 用户要在 Codex 或 Claude Code 中唤起 Chatnets，把学习对话沉淀到全局 Obsidian vault，整理 Session、原子概念、Flow、概念图、MOC 和参考资料
+description: Use when 用户要在 Codex 或 Claude Code 中唤起 Chatnets，把学习对话沉淀到全局 Obsidian vault，整理 Notes、Session、原子概念、Flow、概念图、MOC 和参考资料
 ---
 
 # Chatnets
 
 Chatnets 是一个全局学习写作协议。用户先在 Codex 或 Claude Code 中自然学习、追问和费曼复述；当用户觉得这段对话值得沉淀时，唤起 Chatnets。Chatnets 读取当前可见对话和 `~/Chatnets` 中已有笔记，给出落盘草案，用户确认后写入 Obsidian vault。
 
-Chatnets 的输出落在五类 Obsidian 文件中：`Session` 提供学习记忆索引，`Concepts` 沉淀原子概念，`Flows` 记录流程和链路，`Mocs` 组织知识地图，`Assets` 保存参考材料。文件路径、双向链接和用户整理动作表达知识的组织状态。
+Chatnets 的输出落在六类 Obsidian 文件中：`Notes` 记录轻量小记，`Session` 提供学习记忆索引，`Concepts` 沉淀原子概念，`Flows` 记录流程和链路，`Mocs` 组织知识地图，`Assets` 保存参考材料。文件路径、双向链接和用户整理动作表达知识的组织状态。
 
 ## Vault 结构
 
@@ -16,13 +16,15 @@ Chatnets 的输出落在五类 Obsidian 文件中：`Session` 提供学习记忆
 ```text
 ~/Chatnets/
   Assets/
+  Notes/
   Session/
   Concepts/
   Flows/
   Mocs/
 ```
 
-- `Assets/`：图片、PDF、截图、网页资料和其他参考材料。概念图默认放入 `Assets/Concepts/`，概念笔记、Flow、Session 和 MOC 里引用对应材料。
+- `Assets/`：图片、PDF、截图、网页资料和其他参考材料。概念图默认放入 `Assets/Concepts/`，概念笔记、Flow、Notes、Session 和 MOC 里引用对应材料。
+- `Notes/`：轻量小记，按大类平铺，如 `Notes/Linux.md`、`Notes/Kubernetes.md`。文件内部按月份追加，用来记录一句或几句就能说清的小理解。
 - `Session/`：学习记忆索引，按大类平铺，如 `Session/Linux.md`、`Session/Kubernetes.md`。文件内部按月份追加。
 - `Concepts/`：原子概念集合。`Concepts/xx.md` 表示由 Chatnets 根据学习对话生成、等待用户归类的概念；`Concepts/<目录>/xx.md` 表示已归入某个知识目录的概念。
 - `Flows/`：流程笔记集合，记录操作步骤、源码调用链、执行链路和排障路径。默认按大类建目录，如 `Flows/E2B/ResumeSandbox 到 VM ready.md`。
@@ -33,6 +35,7 @@ Chatnets 的输出落在五类 Obsidian 文件中：`Session` 提供学习记忆
 常见触发：
 
 - 用户先聊天学习，然后说“用 Chatnets 总结一下”“沉淀到 Chatnets”“整理进 Obsidian”。
+- 用户发现一个很小的点，轻量唤起 Chatnets，比如“原来是这样啊，记个 Notes”“这个点记一下 Notes”。
 - 用户在费曼复述里直接唤起 Chatnets，比如“我的理解是... 这段用 Chatnets 记一下”。
 - 用户学习了一条操作流程、源码调用链或执行链路，要求 Chatnets 记录成 Flow。
 - 用户定期整理 `Concepts/` 根目录，要求 Chatnets 把某些概念归入 `Concepts/<目录>/` 并更新 MOC。
@@ -46,15 +49,15 @@ Chatnets 的可用来源范围是：当前可见对话、用户提供的文件�
 - 能明确判断时，直接使用对应大类。
 - 对话跨多个大类时，选择最主要的大类，并在草案里说明次要关联。
 - 不确定时，只问一次用户要归到哪个大类。
-- 新大类成立时，同时创建 `Session/<大类>.md` 和 `Mocs/<大类>.md`。
+- 新大类成立时，根据本次记录类型创建对应文件：Notes 场景只创建 `Notes/<大类>.md`；Session、Concept、Flow 场景按需创建 `Session/<大类>.md` 和 `Mocs/<大类>.md`。
 
 ## 落盘流程
 
-1. 读取相关历史：对应的 `Mocs/<大类>.md`、`Session/<大类>.md`、可能相关的 `Concepts/` 和 `Flows/` 文件。
-2. 从当前对话中识别学习收获，重点看用户提问和用户费曼复述；如果用户多次复述、修正和追问同一问题，要保留理解逐步形成的过程。
-3. 给出简短落盘草案，列出准备更新的 `Session`、`Concepts`、`Flows`、`Mocs`、`Assets`。
+1. 读取相关历史：对应的 `Mocs/<大类>.md`、`Notes/<大类>.md`、`Session/<大类>.md`、可能相关的 `Concepts/` 和 `Flows/` 文件。Notes 场景不必为了落盘创建或更新 Session。
+2. 从当前对话中识别学习收获和记录形态：Notes 记录一句或几句就能说清的小理解；概念型学习重点看用户提问和费曼复述；流程型学习重点看过程目标、用户关键输入、AI 核心回复和验证结果。如果流程中出现费曼复述，也作为过程中的理解节点保留。
+3. 给出简短落盘草案，列出准备更新的 `Notes`、`Session`、`Concepts`、`Flows`、`Mocs`、`Assets`。
 4. 等用户确认。用户可以确认全部、只确认部分，或要求修改。
-5. 确认后写入文件。新增概念默认写入 `Concepts/` 根目录；新增 Flow 默认写入 `Flows/<大类>/`；分类目录只在用户明确要求整理时使用。
+5. 确认后写入文件。新增 Note 默认追加到 `Notes/<大类>.md`；新增概念默认写入 `Concepts/` 根目录；新增 Flow 默认写入 `Flows/<大类>/`；分类目录只在用户明确要求整理时使用。
 6. 如果 `~/Chatnets` 已初始化 git 仓库，落盘后提交一次 commit；如果尚未初始化，先询问用户是否启用 git 版本管理。
 
 落盘草案示例：
@@ -65,6 +68,9 @@ Chatnets 的可用来源范围是：当前可见对话、用户提供的文件�
 ### Session
 - 更新 `Session/Linux.md` 的 `2026-05` 小节，记录 containerd/runc 这次学习。
 - 如果当前环境有 `CODEX_THREAD_ID`，写入原始对话回跳链接。
+
+### Notes
+- 追加 `Notes/Linux.md`：记录 `time` 命令里 `real/user/sys` 的含义。
 
 ### Concepts
 - 新建 `Concepts/containerd.md`
@@ -125,15 +131,19 @@ Session/
 
 记录原则：
 
-- 固定使用加粗标签：`**原始对话：**`、`**用户提问：**`、`**AI 摘要：**`、`**用户费曼复述：**`、`**AI 纠错/评价：**`、`**相关概念：**`。
-- 每个费曼三元组/四元组之间用 `---` 分割，方便人在 Obsidian 中扫读。
-- 用户说的话尽量一字不差，尤其是提问和费曼复述。
-- AI 回复只写摘要，突出结论、纠错和边界。
-- 如果用户围绕同一问题多次费曼复述，按时间顺序把每一轮都写入同一个 `###` 学习标题下；不要只保留最后一次正确复述。
-- 多轮复述之间用 `---` 分割。后续轮次可以只写本轮新增的 `**AI 摘要：**`、`**用户费曼复述：**`、`**AI 纠错/评价：**` 和 `**相关概念：**`，不用重复已经相同的原始对话链接。
+- Session 分为 Concept Session 和 Flow Session。Concept Session 记录理解纠偏；Flow Session 记录过程推进。
+- Concept Session 使用加粗标签：`**原始对话：**`、`**用户提问：**`、`**AI 摘要：**`、`**用户费曼复述：**`、`**AI 纠错/评价：**`、`**相关概念：**`。
+- Flow Session 使用加粗标签：`**原始对话：**`、`**关联 Flow：**`、`**过程目标：**`、`**用户关键输入：**`、`**AI 核心回复：**`、`**验证结果：**`、`**相关笔记：**`。
+- Flow Session 不强制写 `**用户提问：**`、`**AI 摘要：**`、`**用户费曼复述：**` 这组三元组；用户关键输入只保留问题、决策、阻塞点和关键命令，不粘贴长日志。
+- 如果 Flow 过程中用户有费曼复述，可以额外加入 `**用户费曼复述：**` 和 `**AI 纠错/评价：**`，但只记录和流程理解有关的部分。
+- 每个 Concept 费曼三元组/四元组，或 Flow 的关键过程片段之间，用 `---` 分割，方便人在 Obsidian 中扫读。
+- Concept Session 里，用户说的话尽量一字不差，尤其是提问和费曼复述。
+- Flow Session 里，用户输入可以简略改写；AI 回复只写核心过程节点、关键结论和边界。
+- Concept Session 中，如果用户围绕同一问题多次费曼复述，按时间顺序把每一轮都写入同一个 `###` 学习标题下；不要只保留最后一次正确复述。
+- Concept Session 的多轮复述之间用 `---` 分割。后续轮次可以只写本轮新增的 `**AI 摘要：**`、`**用户费曼复述：**`、`**AI 纠错/评价：**` 和 `**相关概念：**`，不用重复已经相同的原始对话链接。
 - 每次唤起 Chatnets 后，在对应月份下追加一段。
 - 如果同一天多次学习同一主题，可以追加多个三级标题。
-- 相关概念只链接已经存在或本次将创建的概念文件。
+- Concept Session 的相关概念只链接已经存在或本次将创建的概念文件。Flow Session 的相关笔记可以链接对应 Flow 和相关概念。
 
 原始对话回跳：
 
@@ -141,8 +151,41 @@ Session/
 - 如果用户手动提供 `codex://...` deeplink，使用用户提供的链接。
 - 如果是在 Codex 旁路聊天中唤起 Chatnets，优先让用户提供原学习会话的 deeplink 或 thread id；不要默认把旁路聊天的 `CODEX_THREAD_ID` 当作原学习会话。
 - 如果既没有 `CODEX_THREAD_ID`，也没有用户提供的 deeplink，就省略 `**原始对话：**`，不要阻塞落盘。
-- 原始对话链接只写入 `Session/`，不要写入 `Concepts/` 或 `Mocs/`，避免污染知识图谱。
+- 原始对话链接只写入 `Session/`，不要写入 `Notes/`、`Concepts/`、`Flows/` 或 `Mocs/`，避免污染知识图谱。
 - 原始对话链接只是回到 Codex 原文的快捷入口，不替代 Session 摘要，也不当作长期归档。
+
+## Notes 规则
+
+`Notes/` 记录很小的“原来如此”。它适合保存一句或几句就能说清的小理解，不需要 Session、费曼复述、概念图或完整 MOC 更新。
+
+文件按大类平铺：
+
+```text
+Notes/
+  Linux.md
+  Kubernetes.md
+```
+
+每个文件内部按月份组织，条目之间用 `---` 分隔：
+
+```markdown
+# Linux
+
+## 2026-06
+
+### 2026-06-04 time 命令的 real/user/sys
+
+- **小记：** `time ls` 里的 `real` 是总耗时，`user` 是用户态 CPU 时间，`sys` 是内核态 CPU 时间。
+- **关联笔记：** [[Linux process]]、[[user space]]
+```
+
+记录原则：
+
+- Notes 用来记录单个小点，不承载完整学习过程。
+- 用户说“记个 Notes”“记个小记”“原来是这样啊”时，优先追加到 `Notes/<大类>.md`。
+- Notes 不写入 `Session/`，不写原始对话链接，不生成概念图，不因为小记里出现术语就创建 Concept 或 Flow。
+- `**关联笔记：**` 只链接已存在或本次明确要创建的 Concept/Flow；没有明确关联时可以省略。
+- 如果一条 Note 变成需要独立维护的定义，转成 Concept；如果变成有入口、过程、出口的链路，转成 Flow。
 
 ## 费曼模式
 
@@ -349,32 +392,38 @@ MOC 示例：
 写文件前自检：
 
 1. 是否已经推断或确认大类？
-2. 是否读取了对应 `Mocs/<大类>.md` 和 `Session/<大类>.md`？
-3. 新概念是否真的是原子概念？
-4. 新概念是否默认写入 `Concepts/` 根目录？
-5. 新概念是否包含 `## 概念图`，且没有写入生成提示词？
-6. 概念图是否只表达已确认的核心关系，没有替代正文？
-7. 如果内容是流程、链路、操作步骤或排障路径，是否写入 `Flows/` 而不是伪装成 Concept？
-8. Flow 是否有清楚的入口、流程、出口和关键概念？
-9. MOC 双向链接是否只指向已存在或本次将创建的 Concepts/Flows？
-10. 未创建概念或 Flow 是否放在 MOC 的“待增加”区，并保持纯文本？
-11. Concept 和 Flow 的 `## 学习来源` 是否使用 `[[Session/<大类>#标题|...]]`，没有使用裸的 `[[<大类>#...]]`？
-12. Session 是否尽量保留用户原话，AI 回复是否只摘要？
-13. 如果用户多次费曼复述同一问题，Session 是否按时间顺序保留了每一轮，而不是只保留最终版本？
-14. 如果存在 `CODEX_THREAD_ID` 或用户提供了 deeplink，Session 是否写入 `**原始对话：**`？
-15. 如有 Assets，是否使用正确链接引用？
-16. 用户是否已经确认落盘？
+2. 是否按记录类型读取了对应的 `Notes/<大类>.md`、`Session/<大类>.md`、`Mocs/<大类>.md` 和相关 Concepts/Flows？
+3. 如果是 Notes 场景，是否只追加 `Notes/<大类>.md`，没有创建 Session、概念图或不必要的 Concept/Flow？
+4. Note 是否只记录一个小理解，`**关联笔记：**` 是否只链接已存在或本次明确创建的 Concept/Flow？
+5. 新概念是否真的是原子概念？
+6. 新概念是否默认写入 `Concepts/` 根目录？
+7. 新概念是否包含 `## 概念图`，且没有写入生成提示词？
+8. 概念图是否只表达已确认的核心关系，没有替代正文？
+9. 如果内容是流程、链路、操作步骤或排障路径，是否写入 `Flows/` 而不是伪装成 Concept？
+10. Flow 是否有清楚的入口、流程、出口和关键概念？
+11. MOC 双向链接是否只指向已存在或本次将创建的 Concepts/Flows？
+12. 未创建概念或 Flow 是否放在 MOC 的“待增加”区，并保持纯文本？
+13. Concept 和 Flow 的 `## 学习来源` 是否使用 `[[Session/<大类>#标题|...]]`，没有使用裸的 `[[<大类>#...]]`？
+14. Concept Session 是否尽量保留用户原话，AI 回复是否只摘要？
+15. Flow Session 是否记录过程目标、用户关键输入、AI 核心回复和验证结果，而不是强行套费曼三元组？
+16. 如果 Flow 过程中有费曼复述，是否只保留和流程理解有关的 `**用户费曼复述：**` 与 `**AI 纠错/评价：**`？
+17. 如果用户多次费曼复述同一问题，Session 是否按时间顺序保留了每一轮，而不是只保留最终版本？
+18. 如果存在 `CODEX_THREAD_ID` 或用户提供了 deeplink，Session 是否写入 `**原始对话：**`？
+19. 如有 Assets，是否使用正确链接引用？
+20. 用户是否已经确认落盘？
 
 ## 落盘后检查清单
 
 写文件后自检：
 
-1. `Session/<大类>.md` 已按月份追加。
-2. `Concepts/` 中新增或更新了原子概念。
-3. 新增或大幅更新的 Concept 已有概念图；如果当前环境不能生成图片，已在本次回复或草案说明待补图，且 Concept 文档没有保留生成提示词。
-4. 如有流程、链路、操作步骤或排障路径，`Flows/<大类>/` 中已新增或更新对应 Flow。
-5. `Session/` 中的原始对话链接能回跳到 Codex 原文，且没有写入 `Concepts/`、`Flows/` 或 `Mocs/`。
-6. Concept 和 Flow 的学习来源链接都显式指向 `Session/` 目录。
-7. `Mocs/<大类>.md` 已更新学习路径、概念关联和 Flow 入口。
-8. Obsidian 双向链接都指向已存在或本次创建的 Concepts/Flows。
-9. 如果 `~/Chatnets` 是 git 仓库，已提交一次清晰的 commit。
+1. 如有 Notes，`Notes/<大类>.md` 已按月份追加，条目之间用 `---` 分隔。
+2. Notes 没有写入 `Session/`，没有生成概念图，也没有创建不必要的 Concept/Flow。
+3. 如有 Session，`Session/<大类>.md` 已按月份追加。
+4. 如有 Concepts，`Concepts/` 中新增或更新了原子概念。
+5. 新增或大幅更新的 Concept 已有概念图；如果当前环境不能生成图片，已在本次回复或草案说明待补图，且 Concept 文档没有保留生成提示词。
+6. 如有流程、链路、操作步骤或排障路径，`Flows/<大类>/` 中已新增或更新对应 Flow。
+7. `Session/` 中的原始对话链接能回跳到 Codex 原文，且没有写入 `Notes/`、`Concepts/`、`Flows/` 或 `Mocs/`。
+8. Concept 和 Flow 的学习来源链接都显式指向 `Session/` 目录。
+9. 如有 MOC 变化，`Mocs/<大类>.md` 已更新学习路径、概念关联和 Flow 入口。
+10. Obsidian 双向链接都指向已存在或本次创建的 Concepts/Flows。
+11. 如果 `~/Chatnets` 是 git 仓库，已提交一次清晰的 commit。
